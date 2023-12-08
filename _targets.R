@@ -9,7 +9,16 @@ library(tarchetypes) # Load other packages as needed.
 
 # Set target options:
 tar_option_set(
-  packages = c("basilisk", "tibble", "withr")
+  packages = c(
+    "basilisk",
+    "dplyr",
+    "Matrix",
+    "MatrixGenerics",
+    "progress",
+    "Seurat",
+    "stringr",
+    "withr"
+  )
 )
 
 options(clustermq.scheduler = "multicore")
@@ -29,6 +38,11 @@ list(
     'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE120nnn/GSE120537/suppl/GSE120537%5Fmetadata.csv.gz',
     'GSE120537_metadata.csv.gz'
   ),
+  tar_download(
+    midgut.gtf,
+    'https://ftp.flybase.org/releases/FB2019_02/dmel_r6.27/gtf/dmel-all-r6.27.gtf.gz',
+    'dmel-all-r6.27.gtf.gz'
+  ),
   tar_target(
     OptimalSPCA,
     git_clone_OptimalSPCA(),
@@ -40,7 +54,15 @@ list(
   tar_target(
     OptimalSPCADepot,
     julia_pkg_OptimalSPCADepot(),
-    format='file'#,
-    #cue=tar_cue('never')
+    format='file',
+    cue=tar_cue('never')
+  ),
+  tar_target(
+    indrop,
+    midgut_seurat_for_technology(midgut.counts, midgut.metadata, midgut.gtf, 'inDrop')
+  ),
+  tar_target(
+    indrop.2,
+    RunSparsePCA(indrop, "covar", varnum=8, npcs=10, search_cap=7500)
   )
 )
