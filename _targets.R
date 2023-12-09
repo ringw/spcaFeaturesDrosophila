@@ -63,6 +63,6 @@ list(
   ),
   tar_target(
     indrop.2,
-    RunSparsePCA(indrop, "covar", varnum=8, npcs=10, search_cap=7500)
+    RunSparsePCA(indrop, "covar", varnum=8, npcs=60, eigen_gap=0.05, search_cap=500000)
   )
 )

@@ -33,10 +33,14 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, gtf_file, t
   seurat$pctRibo = seurat %>% PercentageFeatureSet('^Rp[SL]')
   seurat = seurat %>% NormalizeData
   spca.features = seurat %>% FindVariableFeatures(nfeatures=1000) %>% VariableFeatures
+  spca.features = union('esg', spca.features) %>% head(1000)
   seurat = (
     seurat
     %>% FindVariableFeatures(nfeatures=2000)
-    %>% ScaleData(vars.to.regress = 'pctMito')
+    # We decided not to regress out pctMito. ISCs are high in mito content in
+    # this experiment, so removing all variance explained by pctMito definitely
+    # would make it harder to form separate clusters of ISC and EB.
+    %>% ScaleData
     %>% RunPCA(verb=F)
     %>% RunUMAP(dims=1:30)
   )
@@ -45,11 +49,11 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, gtf_file, t
       seurat[['RNA']]@scale.data[spca.features,]
     )
   )
-  
+
   seurat
 }
 
-seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, assay='RNA') {
+seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap, assay='RNA', do.correct.elbow = F) {
   # Julia will accept an UInt64 random seed.
   julia_seed = do.call(
     paste0,
@@ -63,7 +67,7 @@ seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, assay='RN
     )
   )
   covar = seurat@misc[[matrix_name]]
-  feature_loadings = run_optimal_spca(covar, K=varnum, D=npcs, search_cap=search_cap, uint64_seed=julia_seed)
+  feature_loadings = run_optimal_spca(covar, K=varnum, D=npcs, search_cap=search_cap, eigen_gap=eigen_gap, uint64_seed=julia_seed)
   # Fix the signs of feature loadings using the median sign.
   feature_loadings_heatmap = feature_loadings %>% apply(1, \(v) v %>% subset(. != 0)) %>% t
   feature_loadings = feature_loadings * rowMedians(sign(feature_loadings_heatmap))
@@ -105,11 +109,26 @@ seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, assay='RN
     assay=assay,
     key='SPARSE_'
   )
+  if (do.correct.elbow) {
+    obj.perm = order(obj@stdev, decreasing=T)
+    obj.names = paste0(
+      'SPARSE_',
+      seq(ncol(feature_loadings)),
+      ifelse(obj.perm == seq_along(obj.perm), '\'', '')
+    )
+    obj@misc$search.feature.loadings = obj@feature.loadings
+    obj@cell.embeddings = obj@cell.embeddings[, obj.perm]
+    colnames(obj@cell.embeddings) = obj.names
+    obj@feature.loadings = obj@feature.loadings[, obj.perm]
+    colnames(obj@feature.loadings) = obj.names
+    obj@stdev = obj@stdev[obj.perm]
+    names(obj@stdev) = obj.names
+  }
   obj
 }
 
 # Function on Seurat object. To be released later in an spcaFeatures library.
-RunSparsePCA <- function(seurat, matrix_name, varnum, npcs, search_cap, assay='RNA') {
-  seurat[['spca']] = seurat_spca(seurat, matrix_name, varnum, npcs, search_cap, assay=assay)
+RunSparsePCA <- function(seurat, ...) {
+  seurat[['spca']] = seurat_spca(seurat, ...)
   seurat
 }

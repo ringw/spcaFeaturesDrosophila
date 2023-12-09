@@ -23,7 +23,7 @@ julia_pkg_OptimalSPCADepot <- function() {
   )
 }
 
-julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, uint64_seed=NULL) {
+julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL) {
   mat_output = tempfile(fileext = '.csv.gz')
   csv_gz_conn = file(mat_output, 'wb')
   csv_conn = gzcon(csv_gz_conn)
@@ -54,6 +54,8 @@ julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, uint64_se
             D,
             ' ',
             search_cap,
+            ' ',
+            eigen_gap,
             ifelse(
               is.null(uint64_seed),
               '',
@@ -69,9 +71,9 @@ julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, uint64_se
   )
 }
 
-run_optimal_spca <- function(mat, K, D, search_cap=500000, uint64_seed=NULL) {
+run_optimal_spca <- function(mat, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL) {
   output_file = tempfile(fileext = '.csv')
-  p = julia_spca_pipe(mat, output_file, K, D, search_cap, uint64_seed)
+  p = julia_spca_pipe(mat, output_file, K, D, search_cap, eigen_gap, uint64_seed)
   num_progress_dots = 20
 
   # Assume that the total number of ticks is D * num_progress_dots. If one PC
