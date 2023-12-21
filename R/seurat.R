@@ -51,11 +51,12 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, metafeature
   metadata = read.csv(metadata_file, row.names=1, check.names=F)
   counts = counts[, rownames(metadata) %>% subset(metadata$technology == technology)]
   stopifnot(all.equal(rownames(counts), metafeatures$gene_id))
+  rownames(counts) = rownames(metafeatures)
   technology. = technology
   metadata = metadata %>% subset(technology == technology.)
 
   seurat = CreateSeuratObject(counts, meta.data=metadata)
-  seurat[['RNA']]@meta.features = metafeatures
+  seurat[['RNA']]@meta.features[, colnames(metafeatures)] = metafeatures
   seurat$pctRibo = seurat %>% PercentageFeatureSet('^Rp[SL]')
   seurat = seurat %>% NormalizeData
   spca.features = seurat %>% FindVariableFeatures(nfeatures=1000) %>% VariableFeatures

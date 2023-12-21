@@ -127,7 +127,7 @@ list(
       indrop.pca %>% subset(
         # rRNA contamination found using the inDrop technology. In SCTransform,
         # the rRNA genomic features might 
-        features = Features(.) %>% subset(!grepl('rRNA', .))
+        features = rownames(.[['RNA']]) %>% subset(!grepl('rRNA', .))
       ),
       do.correct.umi = F
     )[['SCT']]
