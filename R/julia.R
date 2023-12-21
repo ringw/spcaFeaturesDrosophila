@@ -24,7 +24,7 @@ julia_pkg_OptimalSPCADepot <- function() {
 }
 
 julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL) {
-  mat_output = tempfile(fileext = '.csv.gz')
+  mat_output = tempfile('cov', fileext = '.csv.gz')
   csv_gz_conn = file(mat_output, 'wb')
   csv_conn = gzcon(csv_gz_conn)
   write.csv(mat, csv_conn, row.names = F)
@@ -41,7 +41,7 @@ julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap
         p = pipe(
           paste0(
             obtainEnvironmentPath(julia_env),
-            '/bin/julia --project=. ',
+            '/bin/julia --project=. --threads=auto ',
             # getwd(),
             '/home/ringwalt',
             '/Optimal-SPCA/Algorithm/SPCA.jl ',
@@ -72,7 +72,7 @@ julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap
 }
 
 run_optimal_spca <- function(mat, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL) {
-  output_file = tempfile(fileext = '.csv')
+  output_file = tempfile('SPCA', fileext = '.csv')
   p = julia_spca_pipe(mat, output_file, K, D, search_cap, eigen_gap, uint64_seed)
   num_progress_dots = 20
 

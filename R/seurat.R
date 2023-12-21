@@ -1,11 +1,13 @@
-midgut_seurat_for_technology <- function(counts_file, metadata_file, gtf_file, technology) {
+build_meta_features <- function(counts_file, flybase_file, gtf_file) {
+  flybase = read.table(
+    flybase_file,
+    col.names=c('symbol', 'organism', 'flybase', 'secondary_flybases', 'ann', 'secondary_ann'),
+    sep='\t',
+    quote=''
+  )
   counts = read.csv(counts_file, row.names=1, check.names=F)
-  metadata = read.csv(metadata_file, row.names=1, check.names=F)
-  counts = counts[, rownames(metadata) %>% subset(metadata$technology == technology)]
-  technology. = technology
-  metadata = metadata %>% subset(technology == technology.)
 
-  # Now map counts rownames using the gtf file.
+  # Now guess the transcript lengths for the genes (longest isoform).
   reference = read.table(
     gtf_file,
     sep = '\t',
@@ -15,25 +17,49 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, gtf_file, t
   ) %>% subset(grepl('RNA', type))
   reference$gene_id = str_extract(reference$annotation, 'gene_id "([^"]+)"', group=1)
   reference$gene_symbol = str_extract(reference$annotation, 'gene_symbol "([^"]+)"', group=1)
-  meta.features = reference %>% group_by(gene_id) %>% summarise(
-    gene_symbol = max(gene_symbol),
-    transcript_length = max(abs(end - start) + 1)
+
+  meta.features = data.frame(gene_id = rownames(counts)) %>% left_join(
+    data.frame(
+      gene_symbol = flybase$symbol,
+      gene_id = flybase$flybase
+    ),
+    'gene_id'
   )
-  meta.features = data.frame(gene_id=rownames(counts)) %>% left_join(
-    meta.features, 'gene_id'
+  meta.features = meta.features %>% left_join(
+    reference %>% group_by(gene_id) %>% summarise(
+      transcript_length = max(abs(end - start) + 1)
+    ),
+    'gene_id'
   )
-  rownames(meta.features) = meta.features$gene_symbol %>% replace(
-    duplicated(.) | is.na(.),
-    meta.features$gene_id[duplicated(.) | is.na(.)]
+  meta.features$gene_symbol = meta.features$gene_symbol %>% replace(
+    grepl('\\\\', .),
+    meta.features$gene_id[grepl('\\\\', .)]
   )
-  rownames(counts) = rownames(meta.features)
+
+  meta.features$gene_display = factor(meta.features$gene_symbol) %>% recode(
+    Dl='Delta',
+    `E(spl)malpha-BFM`='E(spl)mα',
+    `E(spl)mbeta-HLH`='E(spl)mβ',
+    alphaTry='α-Try',
+    betaTry='β-Try'
+  ) %>% as.character
+  meta.features %>% column_to_rownames('gene_symbol')
+}
+
+midgut_seurat_for_technology <- function(counts_file, metadata_file, metafeatures, technology, all_size_factors, spca_genes=NULL) {
+  counts = read.csv(counts_file, row.names=1, check.names=F)
+  metadata = read.csv(metadata_file, row.names=1, check.names=F)
+  counts = counts[, rownames(metadata) %>% subset(metadata$technology == technology)]
+  stopifnot(all.equal(rownames(counts), metafeatures$gene_id))
+  technology. = technology
+  metadata = metadata %>% subset(technology == technology.)
 
   seurat = CreateSeuratObject(counts, meta.data=metadata)
-  seurat[['RNA']]@meta.features[,c('gene_id','gene_symbol','transcript_length')] = meta.features
+  seurat[['RNA']]@meta.features = metafeatures
   seurat$pctRibo = seurat %>% PercentageFeatureSet('^Rp[SL]')
   seurat = seurat %>% NormalizeData
   spca.features = seurat %>% FindVariableFeatures(nfeatures=1000) %>% VariableFeatures
-  spca.features = union('esg', spca.features) %>% head(1000)
+  spca.features = union(spca_genes, spca.features) %>% head(1000)
   seurat = (
     seurat
     %>% FindVariableFeatures(nfeatures=2000)
@@ -49,6 +75,7 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, gtf_file, t
       seurat[['RNA']]@scale.data[spca.features,]
     )
   )
+  seurat$size_factor = all_size_factors[colnames(seurat)]
 
   seurat
 }
@@ -130,5 +157,33 @@ seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap
 # Function on Seurat object. To be released later in an spcaFeatures library.
 RunSparsePCA <- function(seurat, ...) {
   seurat[['spca']] = seurat_spca(seurat, ...)
+  seurat
+}
+
+spca_with_centered_umap <- function(seurat, spca, dims=1:50, seed.use=1) {
+  seurat[['spca']] = spca
+  seurat[['umap.spca']] = RunUMAP(
+    spca@cell.embeddings[, dims] %>% scale(scale=F, center=T), seed.use=seed.use
+  )
+  seurat
+}
+
+midgut_classify_cell_types <- function(seurat, colname) {
+  midgut_levels = c(
+    'ISC',
+    'EB',
+    'dEC',
+    'EC',
+    'EC-like',
+    'EE',
+    'copper/iron',
+    'LFC',
+    'cardia'
+  )
+  seurat@meta.data[, str_replace(colname, 'clusters', 'classif')] = (
+    seurat@meta.data[, colname]
+    %>% fct_relabel(\(names) str_replace(names, '\\..*|[0-9]+', ''))
+    %>% fct_relevel(midgut_levels)
+  )
   seurat
 }
