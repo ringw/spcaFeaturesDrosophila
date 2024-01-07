@@ -10,6 +10,7 @@ library(tarchetypes) # Load other packages as needed.
 # Set target options:
 tar_option_set(
   packages = c(
+    "AnnotationDbi",
     "apeglm",
     "basilisk",
     "dplyr",
@@ -17,6 +18,7 @@ tar_option_set(
     "glmGamPoi",
     "Matrix",
     "MatrixGenerics",
+    "org.Hs.eg.db",
     "progress",
     "scran",
     "scuttle",
@@ -37,22 +39,28 @@ list(
   tar_download(
     midgut.counts,
     'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE120nnn/GSE120537/suppl/GSE120537%5Fcounts.csv.gz',
-    'GSE120537_counts.csv.gz'
+    'GSE120537_counts.csv.gz',
+    cue=tar_cue('never')
   ),
   tar_download(
     midgut.metadata,
     'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE120nnn/GSE120537/suppl/GSE120537%5Fmetadata.csv.gz',
-    'GSE120537_metadata.csv.gz'
+    'GSE120537_metadata.csv.gz',
+    cue=tar_cue('never')
   ),
   tar_download(
     midgut.gtf,
     'https://ftp.flybase.org/releases/FB2019_02/dmel_r6.27/gtf/dmel-all-r6.27.gtf.gz',
-    'dmel-all-r6.27.gtf.gz'
+    'dmel-all-r6.27.gtf.gz',
+    cue=tar_cue('never')
+
   ),
   tar_download(
     midgut.flybase,
     'https://ftp.flybase.org/releases/FB2019_02/precomputed_files/genes/fbgn_annotation_ID_fb_2019_02.tsv.gz',
-    'fbgn_annotation_ID_2019_02.tsv.gz'
+    'fbgn_annotation_ID_2019_02.tsv.gz',
+    cue=tar_cue('never')
+
   ),
   tar_target(
     OptimalSPCA,
@@ -159,5 +167,22 @@ list(
   tar_target(
     indrop.deg,
     build_de_data(indrop.glm, indrop.present.genes)
+  ),
+
+  # Adenoid Cystic Carcinoma sample
+  tar_download(
+    acc.counts,
+    'https://ftp.ncbi.nlm.nih.gov/geo/series/GSE210nnn/GSE210171/suppl/GSE210171%5Facc%5Fscrnaseq%5Fcounts.txt.gz',
+    'GSE210171_acc_scrnaseq_counts.txt.gz',
+    cue=tar_cue('never')
+  ),
+  tar_target(
+    acc.spca.feature.file,
+    'AccFibroblast-SPCA-K10-N50-T900.csv',
+    format = "file"
+  ),
+  tar_target(
+    acc,
+    acc_spca(acc.counts, acc.spca.feature.file)
   )
 )
