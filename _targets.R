@@ -95,30 +95,32 @@ list(
     # also separates EB (esg hi, reason unknown) from ISC (esg mid).
     midgut_seurat_for_technology(
         midgut.counts, midgut.metadata, midgut.metafeatures, 'inDrop',
-        midgut.pooledSizeFactors, spca_genes='esg')
-    # Now call the pca clusters.
-    %>% FindNeighbors(dims=1:9) %>% FindClusters(res=1.04, random.seed=1)
-    %>% AddMetaData(
-      Idents(.) %>% fct_recode(
-        ISC='6', EB='7',
-        `EC-like`='0', `EC-like2`='2',
-        `EC-like3`='20',
-        `EC.anterior1`='1', `EC.anterior2`='5',
-        `EC.anterior3`='8', EC.anterior4='9',
-        EC.anterior5='25',
-        `EE.Ast`='3',
-        cardia1='18', cardia2='23',
-        dEC1='4', dEC2='11',
-        `copper/iron`='10',
-        EC.meso='12',
-        LFC1='13', LFC2='19',
-        others.1='14', others.2='18', others.3='22',
-        EC.posterior1='15', EC.posterior2='16',
-        EC.posterior3='17', EC.posterior4='21',
-        EC.posterior5='24'
-      ) %>% fct_relevel('ISC', 'EB', 'EC.anterior1'),
-      'pca_clusters'
-    ) %>% midgut_classify_cell_types('pca_clusters')
+        midgut.pooledSizeFactors, spca_genes='esg') %>%
+      # Now call the pca clusters.
+      FindNeighbors(dims=1:9) %>%
+      FindClusters(res=1.04, random.seed=1) %>%
+      AddMetaData(
+        Idents(.) %>% fct_recode(
+          ISC='6', EB='7',
+          `EC-like`='0', `EC-like2`='2',
+          `EC-like3`='20',
+          `EC.anterior1`='1', `EC.anterior2`='5',
+          `EC.anterior3`='8', EC.anterior4='9',
+          EC.anterior5='25',
+          `EE.Ast`='3',
+          cardia1='18', cardia2='23',
+          dEC1='4', dEC2='11',
+          `copper/iron`='10',
+          EC.meso='12',
+          LFC1='13', LFC2='19',
+          others.1='14', others.2='18', others.3='22',
+          EC.posterior1='15', EC.posterior2='16',
+          EC.posterior3='17', EC.posterior4='21',
+          EC.posterior5='24'
+        ) %>% fct_relevel('ISC', 'EB', 'EC.anterior1'),
+        'pca_clusters'
+      ) %>%
+      midgut_classify_cell_types('pca_clusters')
   ),
   tar_target(
     indrop.spca.dimreduc,
@@ -145,16 +147,46 @@ list(
     RunPCA(indrop.sct, verb=F, assay='SCT')
   ),
   tar_target(
-   indrop,
-   spca_with_centered_umap(indrop.pca, indrop.spca.dimreduc, dims=1:50)
-   %>% FindNeighbors(dims=1:36, red='spca')
-   %>% FindClusters(res=1.28, random.seed=1)
-   %>% AddMetaData(
-     Idents(.) %>% fct_recode(
-       ISC='14', EB='5'
-     ) %>% fct_relevel('ISC', 'EB', '1'),
-     'spca_clusters'
-   ) # %>% midgut_classify_cell_types('spca_clusters')
+    indrop,
+    spca_with_centered_umap(indrop.pca, indrop.spca.dimreduc, dims=1:50) %>%
+      FindNeighbors(dims=1:36, red='spca') %>%
+      FindClusters(res=1.28, random.seed=1) %>%
+      AddMetaData(
+        Idents(.) %>% fct_recode(
+          ISC='14', EB='5',
+          `EC-like`='0',
+          EC.anterior='1',
+          `copper/iron`='2',
+          EC2='3',
+          dEC1='4',
+          EC3='6',
+          EC4='7',
+          EE1='8',
+          LFC1='9',
+          dEC2='10',
+          EE2='11',
+          EC5='12',
+          others.1='13',
+          cardia='15',
+          EC6='16',
+          EC7='17',
+          `EC-like2`='18',
+          LFC2='19',
+          others.2='20',
+          EC8='21',
+          `EC-like3`='22',
+          others.3='23',
+          `EC-like4`='24',
+          EC9='25'
+        ) %>% fct_relevel('ISC', 'EB'),
+        'spca_clusters'
+      ) %>%
+      midgut_classify_cell_types('spca_clusters') %>%
+      AddMetaData(
+        compute_sct_clusters(indrop.sct.pca),
+        'sct_clusters'
+      ) %>%
+      midgut_classify_cell_types('sct_clusters')
   ),
   tar_target(
     indrop.glm,
@@ -167,6 +199,10 @@ list(
   tar_target(
     indrop.deg,
     build_de_data(indrop.glm, indrop.present.genes)
+  ),
+  tar_target(
+    indrop.misc,
+    build_midgut_misc_stats(indrop, indrop.sct.pca)
   ),
 
   # Adenoid Cystic Carcinoma sample

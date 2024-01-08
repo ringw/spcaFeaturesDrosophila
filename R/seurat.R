@@ -188,3 +188,73 @@ midgut_classify_cell_types <- function(seurat, colname) {
   )
   seurat
 }
+
+compute_sct_clusters <- function(indrop.sct.pca) {
+  indrop.sct.snn <- FindNeighbors(indrop.sct.pca@cell.embeddings[, 1:9])$snn
+  sct_clusters <- FindClusters(
+    indrop.sct.snn, res=1.42, random.seed=5
+  ) %>%
+    rownames_to_column %>%
+    pull(res.1.42, rowname)
+  sct_clusters %>% recode(
+    `0`='EC-like1',
+    `1`='EC-like2',
+    `2`='EC1',
+    `3`='copper/iron',
+    `4`='ISC',
+    `5`='dEC1',
+    `6`='EE1',
+    `7`='EC2',
+    `8`='EC3',
+    `9`='EC4',
+    `10`='others.1',
+    `11`='EC5',
+    `12`='EE2',
+    `13`='EC6',
+    `14`='cardia',
+    `15`='EC7',
+    `17`='EC8',
+    `18`='LFC',
+    `19`='EC9',
+    `20`='EC10',
+    `21`='EC11',
+    `22`='EB',
+    `23`='EC',
+    `25`='EC-like3',
+    `26`='EC-like4',
+    `27`='EC12',
+    `28`='EC13',
+    `29`='EC14',
+    `32`='EC15'
+  )
+}
+
+build_midgut_misc_stats <- function(indrop, indrop.sct.pca, npcs=25) {
+  stem.explained = mapply(
+    \(ident, reduction) {
+      ident = indrop@meta.data[, ident]
+      stem = reduction@cell.embeddings %>% subset(ident %in% c('ISC','EB'))
+      ISC = reduction@cell.embeddings %>% subset(ident == 'ISC')
+      EB = reduction@cell.embeddings %>% subset(ident == 'EB')
+      result = c(
+        ISC=sum(colVars(ISC[, 1:npcs])) * nrow(ISC) / nrow(stem),
+        EB=sum(colVars(EB[, 1:npcs])) * nrow(EB) / nrow(stem)
+      )
+      c(
+        ISC.sample=sum(colVars(ISC[, 1:npcs])),
+        EB.sample=sum(colVars(EB[, 1:npcs])),
+        result,
+        SSB=sum(colVars(stem[, 1:npcs])) - sum(result)
+      )
+    },
+    c('pca_clusters', 'spca_clusters', 'sct_clusters'),
+    list(indrop[['pca']], indrop[['spca']], indrop.sct.pca)
+  )
+  pca.to.spca.shrink.var = (
+    stem.explained[,'pca_clusters'] / stem.explained[,'spca_clusters']
+  )
+  list(
+    stem.explained=stem.explained,
+    pca.to.spca.shrink.var=pca.to.spca.shrink.var
+  )
+}
