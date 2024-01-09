@@ -1,4 +1,4 @@
-acc_spca <- function(counts_file, spca_file) {
+preprocess_acc <- function(counts_file) {
   acc <- (
     read.table(
       counts_file, row.names = 1, header = T
@@ -24,11 +24,6 @@ acc_spca <- function(counts_file, spca_file) {
       duplicated(.), names(.)[duplicated(.)]
     ) %>%
     setNames(NULL)
-  rownames(acc) <- rownames(acc) %>%
-    recode(
-      ENSG00000226145="KRT16P6", ENSG00000131401="NAPSB", LOC112267968="ENSG00000285492"
-    ) %>%
-    as.character
   acc <- acc %>% CreateSeuratObject()
   acc$pct.mito <- acc %>%
     PercentageFeatureSet(features = rownames(acc)[mt.genes.logical])
@@ -45,14 +40,22 @@ acc_spca <- function(counts_file, spca_file) {
   # -> ln(TPM+1)
   acc = acc %>% NormalizeData(scale.factor = 1000 * 1000)
   acc = acc %>% SetAssayData('data', GetAssayData(acc[['RNA']], 'data') / log(2))
-  acc = acc %>% FindVariableFeatures %>% ScaleData
-  acc = acc %>% RunPCA(verb=F)
-  # UMAP and clustering
-  acc = acc %>% RunUMAP(dims = 1:10)
-  acc$pca_clusters = (
-    acc %>% FindNeighbors(dims = 1:10) %>% FindClusters
-  )$seurat_clusters
+  interesting.features <- 'TP63'
+  acc = acc %>% FindVariableFeatures %>%
+    ScaleData(features = union(VariableFeatures(.), interesting.features))
+  spca.features <- VariableFeatures(acc) %>% head(1000)
+  req.features <- setdiff(interesting.features, spca.features)
+  spca.features <- spca.features %>% head(1000 - length(req.features)) %>%
+    union(req.features)
+  acc@misc$covar = acc[['RNA']]@scale.data[spca.features, ] %>%
+    t %>%
+    as.matrix %>%
+    var
 
+  acc
+}
+
+process_acc_spca <- function(acc, spca) {
   # Load SPCA from file
   acc.spca.feature <- read.csv(spca_file, check.names=F) %>% as.matrix
   spca.emb = matrix(nrow = ncol(acc), ncol = nrow(acc.spca.feature), dimnames = list(Cells(acc), paste0("SPCA_", 1:nrow(acc.spca.feature))))

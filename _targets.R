@@ -212,10 +212,15 @@ list(
     'GSE210171_acc_scrnaseq_counts.txt.gz',
     cue=tar_cue('never')
   ),
+  tar_target(acc.rna, preprocess_acc(acc.counts)),
   tar_target(
-    acc.spca.feature.file,
-    'AccFibroblast-SPCA-K10-N50-T900.csv',
-    format = "file"
+    acc.spca.dimreduc,
+    RunSparsePCA(
+      acc.rna, 'covar', varnum=10, npcs=50, eigen_gap=0.05, search_cap=100000
+    )[['spca']]# ,
+    # We are not going to change the construction of the 'covar' matrix, so
+    # don't rerun this expensive step.
+    # cue=tar_cue('never')
   ),
   tar_target(
     acc,
