@@ -16,6 +16,7 @@ tar_option_set(
     "dplyr",
     "forcats",
     "glmGamPoi",
+    "infercnv",
     "Matrix",
     "MatrixGenerics",
     "org.Hs.eg.db",
@@ -212,18 +213,54 @@ list(
     'GSE210171_acc_scrnaseq_counts.txt.gz',
     cue=tar_cue('never')
   ),
-  tar_target(acc.rna, preprocess_acc(acc.counts)),
+  tar_target(acc.rownames, make_rownames.acc(acc.counts)),
+  tar_target(
+    acc.gene.order,
+    write_gene_order.acc(
+      acc.counts, acc.rownames, "GSE210171_acc_gene_order.tsv"
+    ),
+    format = "file"
+  ),
+  tar_target(acc.rna, preprocess_acc(acc.counts, acc.rownames)),
   tar_target(
     acc.spca.dimreduc,
     RunSparsePCA(
       acc.rna, 'covar', varnum=10, npcs=50, eigen_gap=0.05, search_cap=100000
-    )[['spca']]# ,
+    )[['spca']],
     # We are not going to change the construction of the 'covar' matrix, so
     # don't rerun this expensive step.
-    # cue=tar_cue('never')
+    cue=tar_cue('never')
   ),
   tar_target(
     acc,
-    acc_spca(acc.counts, acc.spca.feature.file)
+    process_acc_spca(acc.rna, acc.spca.dimreduc)
+  ),
+  tar_target(
+    acc.annotations.pca,
+    write_seurat_column(acc, "pca_coarse", "GSE210171_acc_pca_coarse.tsv"),
+    format = "file"
+  ),
+  tar_target(
+    acc.infercnv.pca,
+    {
+      output_path <- "acc_infercnv_pca"
+      with_options(
+        list(scipen=100),
+        infercnv::run(
+          infercnv::CreateInfercnvObject(
+            acc[['RNA']]@counts,
+            acc.gene.order,
+            acc.annotations.pca,
+            # Seurat may be splitting up the highly heterogeneous malignant
+            # component into more clusters, so assume that cluster '0' is a good
+            # non-malignant cluster.
+            ref_group_names='0'
+          ),
+          out_dir = output_path
+        )
+      )
+      output_path
+    },
+    format = "file"
   )
 )

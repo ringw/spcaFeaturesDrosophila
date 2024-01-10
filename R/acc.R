@@ -1,4 +1,48 @@
-preprocess_acc <- function(counts_file) {
+make_rownames.acc <- function(counts_file) {
+  acc <- (
+    read.table(
+      counts_file, row.names = 1, header = T
+    ) %>%
+      subset(select = -c(Chr, Start, End, Strand, Length))
+  )
+  mapIds(
+    org.Hs.eg.db, rownames(acc) %>% str_replace("\\.[0-9]+", ""), "SYMBOL", "ENSEMBL"
+  ) %>%
+    replace(
+      is.na(.), names(.)[is.na(.)]
+    ) %>%
+    replace(
+      duplicated(.), names(.)[duplicated(.)]
+    ) %>%
+    setNames(NULL)
+}
+
+# Write chr, start, end for our genes.
+write_gene_order.acc <- function(counts_file, rownames.acc, output_file) {
+  gene_order <- (
+    read.table(
+      counts_file, row.names = 1, header = T
+    ) %>%
+      subset(select = c(Chr, Start, End))
+  )
+  dimnames(gene_order) = list(
+    rownames.acc,
+    c('chr', 'start', 'stop')
+  )
+  gene_order$chr <- gene_order$chr %>% str_extract("[^;]+")
+  gene_order[, 2:3] <- gene_order[, 2:3] %>%
+    apply(
+      1,
+      \(chars) strsplit(chars, ";") %>%
+        unlist %>%
+        as.numeric %>%
+        range
+    ) %>% t
+  write.table(gene_order, output_file, col.names=F, quote = FALSE, sep = "\t")
+  output_file
+}
+
+preprocess_acc <- function(counts_file, rownames.acc) {
   acc <- (
     read.table(
       counts_file, row.names = 1, header = T
@@ -14,16 +58,7 @@ preprocess_acc <- function(counts_file) {
   ) %>%
     `==`("MT") %>%
     replace(is.na(.), F)
-  rownames(acc) <- mapIds(
-    org.Hs.eg.db, rownames(acc) %>% str_replace("\\.[0-9]+", ""), "SYMBOL", "ENSEMBL"
-  ) %>%
-    replace(
-      is.na(.), names(.)[is.na(.)]
-    ) %>%
-    replace(
-      duplicated(.), names(.)[duplicated(.)]
-    ) %>%
-    setNames(NULL)
+  rownames(acc) <- rownames.acc
   acc <- acc %>% CreateSeuratObject()
   acc$pct.mito <- acc %>%
     PercentageFeatureSet(features = rownames(acc)[mt.genes.logical])
@@ -56,22 +91,8 @@ preprocess_acc <- function(counts_file) {
 }
 
 process_acc_spca <- function(acc, spca) {
-  # Load SPCA from file
-  acc.spca.feature <- read.csv(spca_file, check.names=F) %>% as.matrix
-  spca.emb = matrix(nrow = ncol(acc), ncol = nrow(acc.spca.feature), dimnames = list(Cells(acc), paste0("SPCA_", 1:nrow(acc.spca.feature))))
-  spca.data = GetAssayData(acc, slot = 'scale.data')
-  spca.data = spca.data[colnames(acc.spca.feature), ]
-  for (i in 1:nrow(acc.spca.feature)) {
-    # PCA loadings given the subset of k variables only.
-    u = t(spca.data) %*% acc.spca.feature[i, ]
-    # Deflate only the k variables
-    spca.emb[, i] = u
-    # (I - x %*% t(x)) %*% spca.data
-    spca.data = spca.data - acc.spca.feature[i, ] %*% t(u)
-  }
-  acc[["spca"]] = CreateDimReducObject(embeddings = spca.emb, key = "SPCA_", assay = "RNA")
-  acc[["spca"]]@stdev = apply(spca.emb, 2, \(x) norm(x, type='2')) / sqrt(ncol(acc))
-  k = sum(acc.spca.feature[1,] != 0)
+  acc[["spca"]] = spca
+  k <- sum(spca[,1] != 0)
 
   acc = acc %>% RunUMAP(reduction='spca', dims=1:50, reduction.name='umap.spca')
   acc$Notch_Score <- colMeans(
@@ -81,6 +102,9 @@ process_acc_spca <- function(acc, spca) {
   acc$spca_clusters = (
     acc %>% FindNeighbors(red = "spca", dims = 1:33) %>% FindClusters(res = 0.5)
   )$seurat_clusters
+  acc$spca_coarse = (
+    acc %>% FindNeighbors(red = "spca", dims = 1:33) %>% FindClusters(res = 0.1)
+  )$seurat_clusters
 
   RNA.scaled <- acc[["RNA"]]
   Key(RNA.scaled) <- "rnascaled_"
@@ -89,6 +113,12 @@ process_acc_spca <- function(acc, spca) {
   acc <- acc %>% ScaleData(vars.to.regress = c("nFeature_RNA", "pct.mito"))
   acc <- acc %>% RunPCA(verb = F)
   acc <- acc %>% RunUMAP(dims = 1:15)
+  acc$pca_clusters = (
+    acc %>% FindNeighbors(dims = 1:10) %>% FindClusters(res = 0.5)
+  )$seurat_clusters
+  acc$pca_coarse = (
+    acc %>% FindNeighbors(dims = 1:10) %>% FindClusters(res = 0.1)
+  )$seurat_clusters
 
   # Y = beta M^T
   # beta -> beta * betamat.transform
@@ -113,4 +143,20 @@ process_acc_spca <- function(acc, spca) {
   )
 
   acc
+}
+
+write_seurat_column <- function(seurat, column_name, output_path) {
+  df <- data.frame(
+    cell = Cells(seurat),
+    ident = seurat@meta.data[, column_name]
+  )
+  write.table(
+    df,
+    output_path,
+    row.names = F,
+    col.names = F,
+    quote = FALSE,
+    sep = "\t"
+  )
+  output_path
 }
