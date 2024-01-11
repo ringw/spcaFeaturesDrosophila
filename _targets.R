@@ -254,7 +254,8 @@ list(
             # FindMarkers: cluster '0' is TP63+, while cluster '1' is not.
             ref_group_names='1'
           ),
-          out_dir = output_path
+          out_dir = output_path,
+          HMM = TRUE
         )
       )
       output_path
