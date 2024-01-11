@@ -251,10 +251,8 @@ list(
             acc[['RNA']]@counts,
             acc.gene.order,
             acc.annotations.pca,
-            # Seurat may be splitting up the highly heterogeneous malignant
-            # component into more clusters, so assume that cluster '0' is a good
-            # non-malignant cluster.
-            ref_group_names='0'
+            # FindMarkers: cluster '0' is TP63+, while cluster '1' is not.
+            ref_group_names='1'
           ),
           out_dir = output_path
         )
