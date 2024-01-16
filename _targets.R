@@ -4,6 +4,8 @@
 #   https://books.ropensci.org/targets/walkthrough.html#inspect-the-pipeline
 
 # Load packages required to define the pipeline:
+library(magrittr)
+library(stringr)
 library(targets)
 library(tarchetypes) # Load other packages as needed.
 
@@ -13,9 +15,13 @@ tar_option_set(
     "AnnotationDbi",
     "apeglm",
     "basilisk",
+    "colorspace",
     "dplyr",
     "forcats",
     "ggnewscale",
+    "ggplot2",
+    "ggpubr",
+    "ggrastr",
     "glmGamPoi",
     "infercnv",
     "Matrix",
@@ -27,6 +33,7 @@ tar_option_set(
     "Seurat",
     "stringr",
     "tibble",
+    "viridis",
     "withr"
   )
 )
@@ -35,6 +42,37 @@ options(clustermq.scheduler = "multicore")
 
 tar_source()
 # source("other_functions.R") # Source other scripts as needed.
+
+# Patient identifiers.
+acc_individual <- paste0("ACC", c(2,5,7,15,19,21,22))
+
+acc_figures = list(
+  tar_target(
+    fig.acc.annotated,
+    save_figure("figure/ACC/ACC-Annotation.pdf", acc_annotated_figure(acc), width=4, height=3),
+    format = "file"
+  ),
+  tar_target(
+    fig.acc.arranged,
+    save_figure("figure/ACC/ACC-Preview.pdf", acc_arrange_figure(acc), width=12, height=3),
+    format = "file"
+  ),
+  tar_map(
+    data.frame(individual = acc_individual),
+    tar_target(
+      fig.acc.individual,
+      save_figure(
+        paste0(
+          "figure/ACC/ACC-Preview-",
+          individual,
+          ".pdf"
+        ),
+        acc_arrange_figure(acc, individual), width=12, height=3
+      ),
+      format = "file"
+    )
+  )
+)
 
 # Replace the target list below with your own:
 list(
@@ -233,23 +271,25 @@ list(
     cue=tar_cue('never')
   ),
   tar_target(
-    acc,
+    acc.spca,
     process_acc_spca(acc.rna, acc.spca.dimreduc)
   ),
   tar_target(
     acc.annotations.pca,
-    write_seurat_column(acc, "pca_coarse", "GSE210171_acc_pca_coarse.tsv"),
+    write_seurat_column(acc.spca, "pca_coarse", "GSE210171_acc_pca_coarse.tsv"),
     format = "file"
   ),
   tar_target(
     acc.infercnv.pca,
     {
       output_path <- "acc_infercnv_pca"
+      if (file.exists(output_path))
+        file.rename(output_path, paste0(output_path, "~"))
       with_options(
         list(scipen=100),
         infercnv::run(
           infercnv::CreateInfercnvObject(
-            acc[['RNA']]@counts,
+            acc.rna[['RNA']]@counts,
             acc.gene.order,
             acc.annotations.pca,
             # FindMarkers: cluster '0' is TP63+, while cluster '1' is not.
@@ -261,6 +301,14 @@ list(
       )
       output_path
     },
-    format = "file"
-  )
+    format = "file",
+    cue = tar_cue("never")
+  ),
+  tar_target(
+    acc,
+    acc.spca %>%
+      infercnv::add_to_seurat(infercnv_output_path = acc.infercnv.pca)
+  ),
+  acc_figures,
+  tar_combine(acc.figures, acc_figures)
 )

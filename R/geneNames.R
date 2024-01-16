@@ -4,12 +4,18 @@ gene_names <- list(
   `E(spl)mbeta-HLH`="E(spl)m\u03B2"
 )
 
+feature_names <- gene_names %>%
+  append(
+    paste0('SPARSE_', 1:50) %>%
+      sapply(\(n) n %>% str_replace('SPARSE_', 'SPC'), simplify=F)
+  )
+
 display_gene_names <- function(fct) {
   do.call(
     recode,
     append(
       list(fct),
-      gene_names
+      feature_names
     )
   )
 }

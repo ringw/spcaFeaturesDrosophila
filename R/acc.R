@@ -95,10 +95,15 @@ process_acc_spca <- function(acc, spca) {
   k <- sum(spca[,1] != 0)
 
   acc = acc %>% RunUMAP(reduction='spca', dims=1:50, reduction.name='umap.spca')
-  acc$Notch_Score <- colMeans(
-    acc[['RNA']][c('NRARP','NOTCH3','HES4','HEY1','HEY2'),]
+  # Major cell types of interest on the left-hand side instead:
+  # acc[['umap.spca']]@cell.embeddings[, 'UMAP_1'] <- (
+  #   -acc[['umap.spca']]@cell.embeddings[, 'UMAP_1']
+  # )
+  acc[['N1N2']] <- colMeans(acc[['RNA']][c('NOTCH1','NOTCH2'), ]) %>% scale(scale=F)
+  # NOTCH3 response, and related genes.
+  acc@meta.data$`N3+` <- colMeans(
+    acc[['RNA']][c('NOTCH3','HES4','HEY1','HEY2','NRARP'),]
   ) %>% scale(scale=F)
-  acc$Notch_1_2 <- colMeans(acc[['RNA']][c('NOTCH1','NOTCH2'), ]) %>% scale(scale=F)
   acc$spca_clusters = (
     acc %>% FindNeighbors(red = "spca", dims = 1:33) %>% FindClusters(res = 0.5)
   )$seurat_clusters
