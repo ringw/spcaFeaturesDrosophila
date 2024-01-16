@@ -160,3 +160,7 @@ write_seurat_column <- function(seurat, column_name, output_path) {
   )
   output_path
 }
+
+# with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_1, SPARSE_14))
+# with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_3, SPARSE_26))
+# with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_12, SPARSE_11))

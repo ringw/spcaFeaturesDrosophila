@@ -15,6 +15,7 @@ tar_option_set(
     "basilisk",
     "dplyr",
     "forcats",
+    "ggnewscale",
     "glmGamPoi",
     "infercnv",
     "Matrix",
