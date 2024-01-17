@@ -4,10 +4,11 @@
 #   https://books.ropensci.org/targets/walkthrough.html#inspect-the-pipeline
 
 # Load packages required to define the pipeline:
-library(magrittr)
+library(dplyr)
 library(stringr)
 library(targets)
-library(tarchetypes) # Load other packages as needed.
+library(tarchetypes)
+library(tibble)
 
 # Set target options:
 tar_option_set(
@@ -46,6 +47,26 @@ tar_source()
 # Patient identifiers.
 acc_individual <- paste0("ACC", c(2,5,7,15,19,21,22))
 
+acc_mutually_exclusive <- tribble(
+  ~feature1, ~feature2,
+  "NOTCH3", "DLL1",
+  "N3+", "N1N2",
+  "SPARSE_14", "SPARSE_1",
+  "SPARSE_26", "SPARSE_3",
+  "SPARSE_11", "SPARSE_12"
+)
+acc_mutually_exclusive$name <- acc_mutually_exclusive %>% with(
+  paste(str_replace(feature1, "\\+", ""), str_replace(feature2, "\\+", ""), sep="_")
+)
+
+acc_feature_loadings = bind_rows(
+  acc_mutually_exclusive %>%
+    subset(select=c(feature1, feature2)) %>%
+    apply(2, \(v) v %>% grep("^SPARSE_", ., val=T) %>% data.frame(feature = .), simplify = FALSE) %>%
+    setNames(c("magma", "viridis")),
+  .id = "viridis_option"
+) %>% within(viridis_option <- as.character(viridis_option))
+
 acc_figures = list(
   tar_target(
     fig.acc.annotated,
@@ -54,7 +75,7 @@ acc_figures = list(
   ),
   tar_target(
     fig.acc.arranged,
-    save_figure("figure/ACC/ACC-Preview.pdf", acc_arrange_figure(acc), width=12, height=3),
+    save_figure("figure/ACC/ACC-Preview.pdf", acc_arrange_figure(acc), width=20, height=4),
     format = "file"
   ),
   tar_map(
@@ -67,7 +88,46 @@ acc_figures = list(
           individual,
           ".pdf"
         ),
-        acc_arrange_figure(acc, individual), width=12, height=3
+        acc_arrange_figure(acc, individual), width=20, height=4
+      ),
+      format = "file"
+    )
+  ),
+  tar_map(
+    acc_mutually_exclusive,
+    names = name,
+    tar_target(
+      fig.acc.blend,
+      save_figure(
+        paste0(
+          "figure/ACC/ACC-Features-", feature1, "-", feature2, ".pdf"
+        ),
+        acc_blend_features_inset(acc, feature1, feature2, show.legend = F),
+        width = 3, height = 4
+      )
+    ),
+    tar_target(
+      fig.acc.blend.legend,
+      save_figure(
+        paste0(
+          "figure/ACC/ACC-Features-", feature1, "-", feature2, "-Legend.pdf"
+        ),
+        acc_blend_features_inset(acc, feature1, feature2) %>% get_legend,
+        width = 0.75, height = 3.1
+      ),
+      format = "file"
+    )
+  ),
+  tar_map(
+    acc_feature_loadings,
+    names = feature,
+    tar_target(
+      fig.acc.loadings,
+      save_figure(
+        paste0("figure/ACC/ACC-Feature-Loadings-", feature, ".pdf"),
+        spc_tile_plot(acc.spca.dimreduc, feature, option=viridis_option, end=0.5),
+        width = 2,
+        height = 3
       ),
       format = "file"
     )

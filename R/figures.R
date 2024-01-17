@@ -17,7 +17,6 @@ spc_tile_plot <- function(spca, column, option="viridis", begin=0, end=1) (list(
   + scale_fill_viridis_c(limits=c(begin,end), breaks=seq(begin,end,length.out=3), option=option, begin=begin, end=end)
   + scale_x_discrete(breaks=NULL, expand=c(0,0))
   + scale_y_discrete(breaks=NULL, limits=rev, expand=c(0,0))
-  
   + labs(x=NULL, y=NULL)
   # + spc.theme
   # + theme(legend.position = 'bottom')

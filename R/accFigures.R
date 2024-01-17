@@ -90,15 +90,17 @@ acc_blend_features <- function(acc, feature1, feature2) {
   ggplot(features, aes(UMAP_1, UMAP_2)) + geom_point(color=features$color, size=2) + geom_tile(aes(color=C1), data.frame(UMAP_1=0, UMAP_2=0, C1=0), alpha=0, width=0, height=0) + scale_color_viridis_c(limits = c(0, feature_maxs[feature1]), end=0.9) + new_scale_color() + geom_tile(aes(color=C1), data.frame(UMAP_1=0, UMAP_2=0, C1=0), alpha=0, width=0, height=0) + scale_color_gradientn(limits = c(0, min(feature_maxs[c(feature1,feature2)])), colors = blend) + new_scale_color() + geom_tile(aes(color=C1), data.frame(UMAP_1=0, UMAP_2=0, C1=0), alpha=0, width=0, height=0) + scale_color_viridis_c(limits = c(0, feature_maxs[feature2]), option = "magma", begin=0.1)
 }
 
-acc_feature1_colors <- function(n=256) viridis(n, end=0.75, option="viridis")
-acc_feature2_colors <- function(n=256) viridis(n, begin=0.1, end=0.9, option="magma")
+acc_feature1_colors <- function(n=256) viridis(n, begin=0.1, end=0.9, option="magma")
+acc_feature2_colors <- function(n=256) viridis(n, end=0.75, option="viridis")
 
-acc_blend_features_inset <- function(acc, feature1, feature2, cells = NULL) {
+acc_blend_features_inset <- function(acc, feature1, feature2, cells = NULL, show.legend = TRUE) {
   data <- acc_fetch_feature(acc, feature1)
   data$feature2 <- acc_fetch_feature(acc, feature2)[, 'LogNormalize']
 
   # Insetting already causes us to subset the cells in acc_fetch_feature
   cells = cells %>% intersect(rownames(data))
+
+  feature_maxs <- colQuantiles(data %>% subset(select=-c(inset,UMAP_1,UMAP_2)) %>% as.matrix, probs=0.95)
 
   bounding_box <- data %>%
     subset(select=c(inset,UMAP_1,UMAP_2)) %>%
@@ -121,7 +123,6 @@ acc_blend_features_inset <- function(acc, feature1, feature2, cells = NULL) {
     `-`(
       rep(colMins(as.matrix(.)), each=nrow(.))
     )
-  feature_maxs <- colQuantiles(data %>% subset(select=-c(inset,UMAP_1,UMAP_2)) %>% as.matrix, probs=0.95)
   feature_mapping <- data %>% subset(select=-c(inset,UMAP_1,UMAP_2)) %>% as.matrix %>%
     `%*%`(matrix(diag(1 / feature_maxs), ncol=ncol(.)))
   feature_mapping <- round(
@@ -134,32 +135,13 @@ acc_blend_features_inset <- function(acc, feature1, feature2, cells = NULL) {
   ) %>% hex
   data <- data %>% cbind(color = colors)
 
-  ggplot(data, aes(UMAP_1, UMAP_2)) + facet_wrap(
+  g <- ggplot(data, aes(UMAP_1, UMAP_2)) + facet_wrap(
     vars(inset), ncol = 1, scales='free'
   ) + rasterize(
     geom_point(
-      color=data$color, size=0.08
+      color=data$color, size=0.16
     ),
     dpi = 600
-  ) + geom_tile(
-    aes(color=c(0, feature_maxs[1]), width=UMAP_1_width, height=UMAP_2_width),
-    bounding_box %>% cbind(C1 = 0),
-    fill = "transparent", linewidth = 0
-  ) + scale_color_viridis_c(
-    limits = c(0, feature_maxs[feature1]), end=0.75,
-    guide = guide_colorbar(title = display_gene_names(feature1))
-  ) + new_scale_color() + geom_tile(
-    aes(color=C1), data.frame(UMAP_1=-Inf, UMAP_2=-Inf, C1=c(0, min(feature_maxs))), alpha=0,
-    width=0, height=0
-  ) + scale_color_gradientn(
-    limits = c(0, min(feature_maxs[c(feature1,feature2)])),
-    colors = blend, guide = guide_colorbar(title = "both")
-  ) + new_scale_color() + geom_tile(
-    aes(color=C1), data.frame(UMAP_1=-Inf, UMAP_2=-Inf, C1=c(0, feature_maxs[2])), alpha=0,
-    width=0, height=0
-  ) + scale_color_viridis_c(
-    limits = c(0, feature_maxs[feature2]), option = "magma", begin=0.1, end=0.9,
-    guide = guide_colorbar(title = display_gene_names(feature2))
   ) + theme_bw() + scale_x_continuous(
     labels = NULL
   ) + scale_y_continuous(
@@ -167,6 +149,31 @@ acc_blend_features_inset <- function(acc, feature1, feature2, cells = NULL) {
   ) + labs(
     x = "UMAP (rotate)", y = "UMAP (rotate)"
   )
+  if (show.legend)
+    g <- g + geom_tile(
+      aes(color=c(0, feature_maxs[1]), width=UMAP_1_width, height=UMAP_2_width),
+      bounding_box %>% cbind(C1 = 0),
+      fill = "transparent", linewidth = 0
+    ) + scale_color_viridis_c(
+      breaks = scales::pretty_breaks(2),
+      limits = c(0, feature_maxs[feature2]), option = "magma", begin=0.1, end=0.9,
+      guide = guide_colorbar(title = display_gene_names(feature1), barheight = 3)
+    ) + new_scale_color() + geom_tile(
+      aes(color=C1), data.frame(UMAP_1=-Inf, UMAP_2=-Inf, C1=c(0, min(feature_maxs))), alpha=0,
+      width=0, height=0
+    ) + scale_color_gradientn(
+      breaks = scales::pretty_breaks(2),
+      limits = c(0, min(feature_maxs[c(feature1,feature2)])),
+      colors = blend, guide = guide_colorbar(title = "both", barheight = 3)
+    ) + new_scale_color() + geom_tile(
+      aes(color=C1), data.frame(UMAP_1=-Inf, UMAP_2=-Inf, C1=c(0, feature_maxs[2])), alpha=0,
+      width=0, height=0
+    ) + scale_color_viridis_c(
+      breaks = scales::pretty_breaks(2),
+      limits = c(0, feature_maxs[feature1]), end=0.75,
+      guide = guide_colorbar(title = display_gene_names(feature2), barheight = 3)
+    )
+  g
 }
 
 acc_arrange_figure <- function(acc, individual = NULL) {
@@ -177,11 +184,11 @@ acc_arrange_figure <- function(acc, individual = NULL) {
   ggarrange(
     if (is.null(individual)) acc_annotated_figure(acc)
     else acc_annotated_figure(acc, individual, guide = individual),
-    acc_blend_features_inset(acc, "DLL1", "NOTCH3", cells = cells),
-    acc_blend_features_inset(acc, "N1N2", "N3+", cells = cells),
-    acc_blend_features_inset(acc, "SPARSE_1", "SPARSE_14", cells = cells),
-    acc_blend_features_inset(acc, "SPARSE_3", "SPARSE_26", cells = cells),
-    acc_blend_features_inset(acc, "SPARSE_12", "SPARSE_11", cells = cells),
+    acc_blend_features_inset(acc, "NOTCH3", "DLL1", cells = cells),
+    acc_blend_features_inset(acc, "N3+", "N1N2", cells = cells),
+    acc_blend_features_inset(acc, "SPARSE_14", "SPARSE_1", cells = cells),
+    acc_blend_features_inset(acc, "SPARSE_26", "SPARSE_3", cells = cells),
+    acc_blend_features_inset(acc, "SPARSE_11", "SPARSE_12", cells = cells),
     nrow = 1,
     widths = c(2,1,1,1,1,1)
   )
