@@ -28,6 +28,7 @@ tar_option_set(
     "Matrix",
     "MatrixGenerics",
     "org.Hs.eg.db",
+    "processx",
     "progress",
     "scran",
     "scuttle",
@@ -91,6 +92,25 @@ acc_figures = list(
         acc_arrange_figure(acc, individual), width=20, height=4
       ),
       format = "file"
+    )
+  ) %>% append(
+    list(
+      tar_combine(
+        fig.acc.allindividuals,
+        .,
+        command = {
+          filename <- "figure/ACC/ACC-Preview-Individuals.pdf"
+          run(
+            "pdfunite",
+            c(
+              !!!.x,
+              filename
+            )
+          )
+          filename
+        },
+        format = "file"
+      )
     )
   ),
   tar_map(
