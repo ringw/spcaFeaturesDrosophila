@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+acc_infercnv_pca
+figure
+GSE*
+Optimal-SPCA-Depot
+src/*.o
+src/*.so
+src/*.dll
+*.csv
+*.gz
+*~
