@@ -31,6 +31,26 @@ acc_annotated_figure <- function(acc, variable = "proportion_cnv", guide = "P(CN
     ) + theme_bw()
 }
 
+# Add the idents from the annotated figure.
+acc_add_components_from_umap <- function(acc) {
+  Idents(acc) <- with(
+    acc[['umap.spca']]@cell.embeddings %>% as.data.frame,
+    between(UMAP_1, -2.75, 5) & between(UMAP_2, -0.75, 8.5)
+  ) %>%
+    ifelse(
+      "ACC",
+      with(
+        acc[['umap.spca']]@cell.embeddings %>% as.data.frame,
+        between(UMAP_1, -2.75, 6.5) & between(UMAP_2, -9.75, -4)
+      ) %>%
+        ifelse(
+          "CAF",
+          "others"
+        )
+    )
+  acc
+}
+
 acc_fetch_feature <- function(acc, feature) {
   data <- cbind(as.data.frame(acc[['umap.spca']]@cell.embeddings), LogNormalize =  acc %>% FetchData(feature) %>% pull(feature))
   bind_rows(
@@ -192,4 +212,338 @@ acc_arrange_figure <- function(acc, individual = NULL) {
     nrow = 1,
     widths = c(2,1,1,1,1,1)
   )
+}
+
+scaleNonneg <- function(mat) {
+  mat <- as.matrix(mat)
+  (
+    DelayedArray(mat) * RleArray(
+      Rle(
+        1 / colSds(mat),
+        rep(nrow(mat), ncol(mat))
+      ),
+      dim(mat)
+    )
+  ) %>% as.matrix %>% round(digits = 5)
+}
+
+acc_make_feature_profiles <- function(acc, features) {
+  features <- acc %>% FetchData(features) %>% as.matrix %>% scaleNonneg %>% as.data.frame
+  cdf_rowData <- expand.grid(
+    x = seq(-1, 8, by = 0.05),
+    ident = c("ACC", "CAF")
+  )[, c(2, 1)]
+  cdf_matrix <- apply(
+    features,
+    2,
+    \(y) cdf_rowData %>%
+      left_join(
+        sapply(
+          c("ACC", "CAF"),
+          \(n) data.frame(
+            ident = n,
+            x = seq(-1, 8, by = 0.05),
+            y = y %>%
+              subset(as.character(Idents(acc)) == n) %>%
+              cut(c(-Inf, seq(-1, 8, by = 0.05))) %>%
+              table %>%
+              cumsum %>% `/`(
+                sum(as.character(Idents(acc)) == n)
+              )
+          ),
+          simplify = F
+        ) %>%
+          bind_rows(.id = "ident"),
+        by = join_by(ident, x)
+      ) %>%
+      pull(y)
+  )
+  rownames(cdf_matrix) <- interaction(cdf_rowData$ident, cdf_rowData$x)
+  cl = kmeans(t(cdf_matrix), 3, ns=100L)
+  cdf_colData <- data.frame(profile = factor(cl$cluster, sort(unique(cl$cluster))))
+  ident_profile <- sapply(
+    c("ACC", "CAF"),
+    \(n) sapply(
+      levels(cdf_colData$profile),
+      \(l) mean(
+        cdf_matrix[
+          which.max(
+            cdf_rowData$ident == n
+            & cdf_rowData$x == 4
+          ),
+          as.character(cdf_colData$profile) == l
+        ]
+      )
+    ) %>% sort %>% head(1) %>% names
+  )
+  names(ident_profile) <- names(ident_profile) %>% paste0("_high")
+  ident_profile <- c(
+    ident_profile,
+    others = levels(cdf_colData$profile)[
+      which.max(!(levels(cdf_colData$profile) %in% ident_profile))
+    ]
+  )
+  cdf_colData$profile <- cdf_colData$profile %>% list %>% append(
+    as.list(ident_profile)
+  ) %>% do.call(fct_recode, .) %>% fct_relevel(
+    "ACC_high", "CAF_high"
+  )
+  SingleCellExperiment(
+    cdf_matrix,
+    colData = cdf_colData,
+    rowData = cdf_rowData
+  )
+}
+
+acc_make_feature_profiles_density <- function(acc, features) {
+  features <- acc %>% FetchData(features) %>% as.matrix %>% scaleNonneg %>% as.data.frame
+  cdf_rowData <- expand.grid(
+    x = seq(-1, 8, by = 0.05),
+    ident = c("ACC", "CAF")
+  )[, c(2, 1)]
+  cdf_matrix <- apply(
+    features,
+    2,
+    \(y) cdf_rowData %>%
+      left_join(
+        sapply(
+          c("ACC", "CAF"),
+          \(n) data.frame(
+            ident = n,
+            bw = 0.2,
+            x = seq(-1, 8, by = 0.05),
+            y = (
+              y %>%
+                subset(as.character(Idents(acc)) == n) %>%
+                density(from = -1, to = 8, n = 9 * 20 + 1)
+            )$y
+          ),
+          simplify = F
+        ) %>%
+          bind_rows(.id = "ident"),
+        by = join_by(ident, x)
+      ) %>%
+      pull(y)
+  )
+  rownames(cdf_matrix) <- interaction(cdf_rowData$ident, cdf_rowData$x)
+  cl = kmeans(t(cdf_matrix), 3, ns=100L)
+  cdf_colData <- data.frame(profile = factor(cl$cluster, sort(unique(cl$cluster))))
+  ident_profile <- sapply(
+    c("ACC", "CAF"),
+    \(n) sapply(
+      levels(cdf_colData$profile),
+      \(l) mean(
+        cdf_matrix[
+          which.max(
+            cdf_rowData$ident == n
+            & cdf_rowData$x == 4
+          ),
+          as.character(cdf_colData$profile) == l
+        ]
+      )
+    ) %>% sort %>% head(1) %>% names
+  )
+  names(ident_profile) <- names(ident_profile) %>% paste0("_high")
+  ident_profile <- c(
+    ident_profile,
+    others = levels(cdf_colData$profile)[
+      which.max(!(levels(cdf_colData$profile) %in% ident_profile))
+    ]
+  )
+  cdf_colData$profile <- cdf_colData$profile %>% list %>% append(
+    as.list(ident_profile)
+  ) %>% do.call(fct_recode, .) %>% fct_relevel(
+    "ACC_high", "CAF_high"
+  )
+  SingleCellExperiment(
+    cdf_matrix,
+    colData = cdf_colData,
+    rowData = cdf_rowData
+  )
+}
+
+acc_plot_feature_profiles <- function(acc.spca.profiles) {
+  acc.spca.profiles %>% assay %>%
+    melt(c("label", "feature"), value.name = "y") %>%
+    left_join(
+      acc.spca.profiles %>% colData %>%
+        as.data.frame %>%
+        rownames_to_column("feature"),
+      by = "feature"
+    ) %>%
+    mutate(
+      ident = str_extract(label, "(ACC|CAF)"),
+      x = str_extract(label, "\\.(.+)", group = 1) %>% as.numeric
+    ) %>%
+    ggplot(aes(x, y, color=ident)) + facet_wrap(vars(profile)) + geom_line(aes(group=interaction(feature, ident)), alpha=0.25) + geom_smooth(linewidth = 2, method="loess")
+}
+
+acc_pca_profiles <- function(acc) {
+  apply(
+    acc[['pca']]@cell.embeddings[, 1:10],
+    2,
+    \(v) tribble(
+      ~ident, ~sign,
+      "ACC", 1,
+      "ACC", -1,
+      "CAF", 1,
+      "CAF", -1
+    )[
+      which.max(
+        as.numeric(
+          cor(
+            cbind(
+              positive = v %>% pmax(0),
+              negative = v %>% pmin(0)
+            ),
+            cbind(
+              ACC = Idents(acc) == "ACC",
+              CAF = Idents(acc) == "CAF"
+            )
+          )
+        )
+      ),
+    ] %>%
+      as.list
+  )
+  with(
+    acc[['pca']]@cell.embeddings %>% as.data.frame,
+    list(
+      CAF=cbind(
+        PC1=PC_1,
+        PC2=-PC_2,
+        PC8=PC_8
+      ) %>% scale,
+      ACC=cbind(
+        PC3=PC_3,
+        PC5=-PC_5,
+        PC6=-PC_6,
+        PC9=-PC_9
+      ) %>% scale
+    )
+  )
+}
+
+acc_spca_profiles <- function(acc) {
+  # tar_load(acc.spca.profiles)
+  # acc.spca.profiles$profile
+  caf_spcs <- c(1, 3, 7, 12, 13, 17, 23, 25, 29, 36, 38, 45)
+  acc_spcs <- c(11, 14, 26, 37, 41, 49)
+  list(
+    CAF=acc[['spca']]@cell.embeddings[, caf_spcs] %>% scale,
+    ACC=acc[['spca']]@cell.embeddings[, acc_spcs] %>% scale
+  )
+}
+
+acc_plot_feature_profiles <- function(acc, m) {
+  names(dimnames(m)) <- c("cell", "feature")
+  x <- seq(-5, 5, by=0.05)
+  profiles <- sapply(
+    c("ACC", "CAF"),
+    \(n) apply(
+      m[as.character(Idents(acc)) == n, ],
+      2,
+      \(y) data.frame(
+        x = x,
+        y = ecdf(y)(x)
+      ),
+      simplify = FALSE
+    ) %>% bind_rows(.id = "feature"),
+    simplify = FALSE
+  ) %>% bind_rows(.id = "ident")
+  profiles
+  ggplot(
+    profiles,
+    aes(x, y, group=interaction(feature, ident), color=ident)
+  ) + geom_line()
+}
+
+acc_nonneg_feature_plot_gradient <- c(hcl(0, 0, 87), hcl(85, 33, 80), hcl(68, 37, 75), hcl(52, 40, 70), hcl(50, 57, 70), hcl(47, 64, 68), hcl(30, 84, 56), hcl(12, 103, 45))
+nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NULL, subset=NULL) {
+  g <- cbind(
+    data.frame(feature = FetchData(acc, feature) %>% pull(feature)),
+    acc[['umap.spca']]@cell.embeddings
+  ) %>% ggplot(aes(x0 = UMAP_1, y0 = UMAP_2, color=feature)) + rasterize(
+    geom_circle(
+      aes(r = 0.005),
+      data = subset
+    ),
+    dpi = 300
+  ) + scale_color_gradientn(
+    colors = acc_nonneg_feature_plot_gradient,
+    limits=c(0, if (is.null(max_scale)) NA else max_scale), oob=scales::squish,
+    guide = guide_colorbar(title = feature %>% display_gene_names)
+  ) + coord_cartesian(
+    c(-3, 6.5), c(-10, 9), expand=F
+  ) + scale_y_continuous(
+    breaks = c(-5, 0, 5)
+  ) + theme_bw() + theme(
+    axis.title.y = element_text(margin = margin()),
+    axis.text.y = element_text(margin = margin(t = 5.5, r = 2, b = 5.5))
+  )
+  for (an in annotations) {
+    # g <- g + append(
+      # list(color="yellow", fill="transparent", linewidth=2),
+      # as.list(an)
+    # ) %>% do.call(annotate, .)
+    # g <- g + annotate(color="yellow", fill="transparent", linewidth=2, "tile", 0, 0, width=3, height=3)
+    g <- g + annotate(
+      color="yellow",
+      fill="transparent",
+      linewidth=2,
+      geom=an$geom,
+      x=an$x,
+      y=an$y,
+      width=an$width,
+      height=an$height
+    )
+  }
+  g
+}
+
+nonneg_feature_plot_query <- function(
+  acc, feature, max_scale, ident
+) {
+  nonneg_feature_plot_annotate(
+    acc, feature, max_scale,
+    subset=\(df) df[Idents(acc) == ident, ]
+  ) + new_scale_color() + rasterize(
+    geom_circle(
+      aes(r = 0.005, color = feature),
+      cbind(
+        data.frame(feature = rep(0, ncol(acc))),
+        acc[['umap.spca']]@cell.embeddings
+      ) %>%
+        subset(Idents(acc) != ident)
+    ),
+    dpi = 300
+  ) + scale_color_gradient2(
+    mid = hcl(97, 12, 93)
+  )
+}
+
+acc_dim_plot_individual <- function(acc, feature) {
+  g <- cbind(
+    data.frame(feature = FetchData(acc, feature) %>% pull(feature)),
+    acc[['umap.spca']]@cell.embeddings
+  ) %>% ggplot(aes(x = UMAP_1, y = UMAP_2, color=feature)) + rasterize(
+    geom_point(
+      size = 0.1,
+      data = subset
+    ),
+    dpi = 300
+  ) + scale_color_viridis_d(
+    option = "turbo", begin = 0.1, end = 0.9,
+    guide = guide_legend(
+      override.aes = list(size = 3)
+    )
+  ) + coord_cartesian(
+    c(-3, 6.5), c(-10, 9), expand=F
+  ) + scale_y_continuous(
+    breaks = c(-5, 0, 5)
+  ) + theme_bw() + theme(
+    axis.title.y = element_text(margin = margin()),
+    axis.text.y = element_text(margin = margin(t = 5.5, r = 2, b = 5.5))
+  )
+  g
 }

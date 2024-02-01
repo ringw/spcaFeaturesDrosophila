@@ -99,11 +99,22 @@ process_acc_spca <- function(acc, spca) {
   # acc[['umap.spca']]@cell.embeddings[, 'UMAP_1'] <- (
   #   -acc[['umap.spca']]@cell.embeddings[, 'UMAP_1']
   # )
-  acc[['N1N2']] <- colMeans(acc[['RNA']][c('NOTCH1','NOTCH2'), ]) %>% scale(scale=F)
+  # The paper refers to NOTCH1 in luminal cells.
+  # We will use feature loadings with a sum of squares of 1, rather than a sum
+  # of 1 (which could produce a weighted mean).
+  acc[['N1N2']] <- colMeans(acc[['RNA']][c('NOTCH1','NOTCH2'), ]) * sqrt(2)
+  # Parikh preferred DLL1, JAG2, by correlation with the overall myoepithelial
+  # transcriptional program (with ACTA2, TP63 having large feature loadings) and
+  # rejecting JAG1. We will start here from a place of less knowledge and apply
+  # all canonical Notch ligands.
+  acc[['ligands']] <- colMeans(acc[['RNA']][c('DLL1','DLL3','DLL4','JAG1','JAG2'), ]) * sqrt(5)
   # NOTCH3 response, and related genes.
   acc@meta.data$`N3+` <- colMeans(
     acc[['RNA']][c('NOTCH3','HES4','HEY1','HEY2','NRARP'),]
-  ) %>% scale(scale=F)
+  ) * sqrt(5)
+  acc[['targets']] <- colMeans(
+    acc[['RNA']][c('NOTCH3','HES4','HEY1','HEY2','NRARP'),]
+  ) * sqrt(5)
   acc$spca_clusters = (
     acc %>% FindNeighbors(red = "spca", dims = 1:33) %>% FindClusters(res = 0.5)
   )$seurat_clusters

@@ -52,6 +52,7 @@ acc_mutually_exclusive <- tribble(
   ~feature1, ~feature2,
   "NOTCH3", "DLL1",
   "N3+", "N1N2",
+  "targets", "ligands",
   "SPARSE_14", "SPARSE_1",
   "SPARSE_26", "SPARSE_3",
   "SPARSE_11", "SPARSE_12"
@@ -67,6 +68,36 @@ acc_feature_loadings = bind_rows(
     setNames(c("magma", "viridis")),
   .id = "viridis_option"
 ) %>% within(viridis_option <- as.character(viridis_option))
+acc_feature_loadings = bind_rows(
+  acc_mutually_exclusive %>%
+    subset(select=c(feature1, feature2)) %>%
+    apply(2, \(v) v %>% grep("^SPARSE_", ., val=T) %>% data.frame(feature = .), simplify = FALSE)
+) %>% within(viridis_option <- "viridis")
+
+# New features: Plot a single feature, use the bounding box of ACC and CAF
+acc_features <- tribble(
+  ~feature, ~max_scale, ~annotations,
+  # "DLL1", 5, quote(list(c("tile", 0, 1, width=4, height=3), c("tile", 0, -7, width=4, height=5.5))),
+  "DLL1", 8, quote(list(list(geom="tile", x=0, y=1, width=4, height=3))),
+  "NOTCH3", 8, NULL,
+  "SPARSE_11", 8, NULL,
+  "SPARSE_26", NA, NULL,
+  "SPARSE_12", NA, NULL,
+  "SPARSE_3", NA, NULL
+)
+acc_features_max_scale <- 8
+acc_query <- tribble(
+  ~ident, ~feature,
+  "ACC", "NOTCH3",
+  "ACC", "DLL1",
+  "CAF", "NOTCH3",
+  "CAF", "DLL1"
+) # %>%
+  # left_join(
+    # acc_features %>%
+      # subset(select=c(feature, max_scale)),
+    # by = "feature"
+  # )
 
 acc_figures = list(
   tar_target(
@@ -123,7 +154,7 @@ acc_figures = list(
           "figure/ACC/ACC-Features-", feature1, "-", feature2, ".pdf"
         ),
         acc_blend_features_inset(acc, feature1, feature2, show.legend = F),
-        width = 3, height = 4
+        width = 2, height = 4
       )
     ),
     tar_target(
@@ -145,11 +176,75 @@ acc_figures = list(
       fig.acc.loadings,
       save_figure(
         paste0("figure/ACC/ACC-Feature-Loadings-", feature, ".pdf"),
-        spc_tile_plot(acc.spca.dimreduc, feature, option=viridis_option, end=0.5),
-        width = 2,
-        height = 3
+        (
+          spc_tile_plot(
+            acc.spca.dimreduc, feature, option=viridis_option, end=0.5,
+            fontface = "plain"
+          )
+          + theme(legend.position = "bottom", legend.margin = margin(r = 5))
+          + guides(
+            fill = guide_colorbar(barwidth = 3, barheight = 0.75, title = "")
+          )
+        ),
+        width = 0.9,
+        height = 3.5
       ),
       format = "file"
+    )
+  ),
+  tar_map(
+    acc_features,
+    names = feature,
+    tar_target(
+      fig.acc.feature,
+      save_figure(
+        paste0("figure/ACC/ACC-Feature-Inset-", feature, ".pdf"),
+        nonneg_feature_plot_annotate(acc, feature, max_scale = 8, annotations)
+          + theme(legend.position = "none"),
+        width = 2,
+        height = 4
+      ),
+      format = "file"
+    )
+  ),
+  tar_map(
+    acc_query,
+    names = all_of(c("feature", "ident")),
+    tar_target(
+      fig.acc.feature.query,
+      save_figure(
+        paste0("figure/ACC/ACC-Feature-Query-", feature, "-", ident, ".pdf"),
+        nonneg_feature_plot_query(acc %>% acc_add_components_from_umap, feature, max_scale = 8, ident)
+          + theme(legend.position = "none"),
+        width = 2,
+        height = 4
+      ),
+      format = "file"
+    )
+  ),
+  tar_target(
+    fig.acc.feature.legend,
+    save_figure(
+      "figure/ACC/ACC-Feature-Legend.pdf",
+      (
+        ggplot(data.frame(x=0, y=0, color=c(0, 8)), aes(x, y, color=color))
+          + geom_point()
+          + scale_color_gradientn(
+            colors = acc_nonneg_feature_plot_gradient
+          )
+          + labs(color = "LogNormalize")
+      ) %>% get_legend,
+      width = 1,
+      height = 2
+    )
+  ),
+  tar_target(
+    fig.acc.individual.discrete,
+    save_figure(
+      "figure/ACC/ACC-Individuals.pdf",
+      acc_dim_plot_individual(acc, "individual"),
+      width = 4,
+      height = 6
     )
   )
 )
