@@ -29,6 +29,7 @@ tar_option_set(
     "Matrix",
     "MatrixGenerics",
     "org.Hs.eg.db",
+    "pillar",
     "processx",
     "progress",
     "reshape2",
