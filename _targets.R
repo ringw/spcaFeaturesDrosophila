@@ -33,6 +33,7 @@ tar_option_set(
     "processx",
     "progress",
     "reshape2",
+    "scales",
     "scran",
     "scuttle",
     "Seurat",
@@ -47,6 +48,27 @@ options(clustermq.scheduler = "multicore")
 
 tar_source()
 # source("other_functions.R") # Source other scripts as needed.
+
+midgut_figures = list(
+  tar_target(
+    fig.indrop.pca,
+    save_figure(
+      "figure/Midgut/UMAP-1-PCA.pdf",
+      plot_indrop_pca(indrop),
+      width = 5, height = 4
+    ),
+    format = "file"
+  ),
+  tar_target(
+    fig.indrop.spca,
+    save_figure(
+      "figure/Midgut/UMAP-1-SPCA.pdf",
+      plot_indrop_spca(indrop),
+      width = 5, height = 4
+    ),
+    format = "file"
+  )
+)
 
 # Patient identifiers.
 acc_individual <- paste0("ACC", c(2,5,7,15,19,21,22))
@@ -426,7 +448,11 @@ list(
   ),
   tar_target(
     indrop,
-    spca_with_centered_umap(indrop.pca, indrop.spca.dimreduc, dims=1:50) %>%
+    spca_with_centered_umap(
+      indrop.pca, indrop.spca.dimreduc, dims=1:50,
+      # Flip the UMAP horizontally and vertically.
+      umap_transform=-diag(2)
+    ) %>%
       FindNeighbors(dims=1:36, red='spca') %>%
       FindClusters(res=1.28, random.seed=1) %>%
       AddMetaData(

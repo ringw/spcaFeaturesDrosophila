@@ -53,7 +53,7 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, metafeature
   stopifnot(all.equal(rownames(counts), metafeatures$gene_id))
   rownames(counts) = rownames(metafeatures)
   technology. = technology
-  metadata = metadata %>% subset(technology == technology.)
+  metadata = metadata %>% subset(technology == technology., select = -c(UMAP_1, UMAP_2))
 
   seurat = CreateSeuratObject(counts, meta.data=metadata)
   seurat[['RNA']]@meta.features[, colnames(metafeatures)] = metafeatures
@@ -161,10 +161,14 @@ RunSparsePCA <- function(seurat, ...) {
   seurat
 }
 
-spca_with_centered_umap <- function(seurat, spca, dims=1:50, seed.use=1) {
+spca_with_centered_umap <- function(seurat, spca, dims=1:50, seed.use=1, umap_transform=diag(2)) {
   seurat[['spca']] = spca
   seurat[['umap.spca']] = RunUMAP(
     spca@cell.embeddings[, dims] %>% scale(scale=F, center=T), seed.use=seed.use
+  )
+  dimnames(umap_transform) <- rep(list(colnames(seurat[['umap.spca']])), 2)
+  seurat[['umap.spca']]@cell.embeddings <- (
+    seurat[['umap.spca']]@cell.embeddings %*% umap_transform
   )
   seurat
 }
