@@ -413,7 +413,8 @@ list(
     SCTransform(
       indrop.pca %>% subset(
         # rRNA contamination found using the inDrop technology. In SCTransform,
-        # the rRNA genomic features might 
+        # features are not unit-scaled, and the rRNA features might have an
+        # unwanted amount of variance (ideally little to none).
         features = rownames(.[['RNA']]) %>% subset(!grepl('rRNA', .))
       ),
       do.correct.umi = F
