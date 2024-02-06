@@ -4,9 +4,16 @@
 # with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_3, SPARSE_26))
 # with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_12, SPARSE_11))
 
-acc_annotated_figure <- function(acc, variable = "proportion_cnv", guide = "P(CNV)") {
+acc_annotated_figure <- function(acc, variable = "proportion_cnv", guide = "P(CNV)", limits=c(0,1), oob_squish=FALSE) {
   # Add some useful columns here
   acc$proportion_cnv = 1 - rowProds(1 - (acc %>% FetchData(paste0('proportion_cnv_chr', 1:22)) %>% as.matrix))
+  square <- function(x) x^2
+  acc$aneuploidy = acc %>%
+    FetchData(paste0('proportion_scaled_cnv_chr', 1:22)) %>%
+    as.matrix %>%
+    square %>%
+    rowMeans %>%
+    sqrt
   for (n in levels(acc$individual))
     acc@meta.data <- acc@meta.data %>%
       cbind(matrix(as.numeric(acc$individual == n), ncol=1, dimnames=list(NULL, n)))
@@ -16,7 +23,8 @@ acc_annotated_figure <- function(acc, variable = "proportion_cnv", guide = "P(CN
       geom_point(size = 0.08), dpi = 600
     ) + scale_color_viridis_c(
       option = 'rocket', begin = 0.05, end = 0.8,
-      limits = c(0, 1), labels = scales::percent,
+      limits = limits, labels = scales::percent,
+      oob = if (oob_squish) scales::squish else scales::censor,
       guide = guide_colorbar(title = guide)
     ) + annotate(
       "rect", xmin = -2.75, xmax = 5, ymin = -0.75, ymax = 8.5, color = 'black', fill = 'transparent'
@@ -460,10 +468,18 @@ acc_plot_feature_profiles <- function(acc, m) {
 
 acc_nonneg_feature_plot_gradient <- c(hcl(0, 0, 87), hcl(85, 33, 80), hcl(68, 37, 75), hcl(52, 40, 70), hcl(50, 57, 70), hcl(47, 64, 68), hcl(30, 84, 56), hcl(12, 103, 45))
 nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NULL, subset=NULL) {
+  xlim <- c(-3.25, 6.75)
+  ylim <- c(-10.25, 9.25)
   g <- cbind(
     data.frame(feature = FetchData(acc, feature) %>% pull(feature)),
     acc[['umap.spca']]@cell.embeddings
-  ) %>% ggplot(aes(x0 = UMAP_1, y0 = UMAP_2, color=feature)) + rasterize(
+  ) %>%
+    subset(
+      between(UMAP_1, xlim[1], xlim[2]) & between(UMAP_2, ylim[1], ylim[2])
+    ) %>%
+    ggplot(
+      aes(x0 = UMAP_1, y0 = UMAP_2, color=feature)
+    ) + rasterize(
     geom_circle(
       aes(r = 0.005),
       data = subset
@@ -474,12 +490,17 @@ nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NU
     limits=c(0, if (is.null(max_scale)) NA else max_scale), oob=scales::squish,
     guide = guide_colorbar(title = feature %>% display_gene_names)
   ) + coord_cartesian(
-    c(-3, 6.5), c(-10, 9), expand=F
+    # clip: annotate the inset may be added to the plot
+    xlim, ylim, expand=F, clip = "off"
+  ) + scale_x_continuous(
+    minor_breaks = NULL
   ) + scale_y_continuous(
     breaks = c(-5, 0, 5)
   ) + theme_bw() + theme(
     axis.title.y = element_text(margin = margin()),
     axis.text.y = element_text(margin = margin(t = 5.5, r = 2, b = 5.5))
+  ) + labs(
+    x = bquote(UMAP[1]), y = bquote(UMAP[2])
   )
   for (an in annotations) {
     # g <- g + append(
@@ -499,6 +520,65 @@ nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NU
     )
   }
   g
+}
+
+nonneg_feature_plot_caf <- function(caf, feature, max_scale) {
+  g <- cbind(
+    data.frame(feature = FetchData(caf, feature) %>% pull(feature)),
+    caf[['umap.spca']]@cell.embeddings
+  ) %>%
+    ggplot(
+      aes(x0 = UMAP_1, y0 = UMAP_2, color=feature)
+    ) + rasterize(
+    geom_circle(
+      aes(r = 0.005),
+      data = subset
+    ),
+    dpi = 300
+  ) + scale_color_gradientn(
+    colors = acc_nonneg_feature_plot_gradient,
+    limits=c(0, if (is.null(max_scale)) NA else max_scale), oob=scales::squish,
+    guide = guide_colorbar(title = feature %>% display_gene_names)
+  # )#  + coord_cartesian(
+    # xlim, ylim, expand=F, clip = "off"
+  ) + scale_x_continuous(
+    minor_breaks = NULL
+  ) + scale_y_continuous(
+    minor_breaks = NULL, breaks = c(-5, 0, 5)
+  ) + theme_bw() + theme(
+    axis.title.y = element_text(margin = margin()),
+    axis.text.y = element_text(margin = margin(t = 5.5, r = 2, b = 5.5))
+  ) + labs(
+    x = bquote("UMAP(CAF)"[1]), y = bquote("UMAP(CAF)"[2])
+  )
+}
+
+idents_plot_caf <- function(caf) {
+  g <- cbind(
+    FetchData(caf, "ident"),
+    caf[['umap.spca']]@cell.embeddings
+  ) %>%
+    ggplot(
+      aes(x = UMAP_1, y = UMAP_2, color=ident)
+    ) + rasterize(
+    geom_point(
+      shape = 20, size = 0.5
+    ),
+    dpi = 300
+  ) + scale_x_continuous(
+    minor_breaks = NULL
+  ) + scale_y_continuous(
+    minor_breaks = NULL, breaks = c(-5, 0, 5)
+  ) + scale_color_hue(
+    guide = guide_legend(title = NULL, override.aes = aes(size = 2))
+  ) + theme_bw() + theme(
+    axis.title.y = element_text(margin = margin(r = -5)),
+    axis.text.y = element_text(margin = margin(t = 5.5, r = 2, b = 5.5)),
+    legend.margin = margin(l = -5, r = -5),
+    legend.key.width = unit(2, "pt")
+  ) + labs(
+    x = bquote("UMAP(CAF)"[1]), y = bquote("UMAP(CAF)"[2])
+  )
 }
 
 nonneg_feature_plot_query <- function(
@@ -546,4 +626,58 @@ acc_dim_plot_individual <- function(acc, feature) {
     axis.text.y = element_text(margin = margin(t = 5.5, r = 2, b = 5.5))
   )
   g
+}
+
+acc_dot_plot <- function(acc.glm, markers) {
+  idents <- c(
+    "myoepithelial", "luminal", "dCAF", "iCAF", "iCAF2",
+    "mCAF", "pCAF"
+  )
+  abundance <- exp(acc.glm$Beta)
+  colnames(abundance) <- colnames(abundance) %>% str_replace("^ident", "")
+  for (c in colnames(abundance))
+    abundance[, c] <- abundance[, c] * (
+      sum(acc.glm$data$size_factor[acc.glm$data$ident == c])
+      / sum(assay(acc.glm$data)[, acc.glm$data$ident == c])
+      * 1000
+      * 1000
+    )
+  plot_data <- expand.grid(
+    cluster = idents,
+    gene = markers
+  ) %>%
+    rowwise() %>%
+    mutate(
+      # CPM = abundance[as.character(gene), as.character(cluster)] / sum(abundance[, as.character(cluster)]) * 1000 * 1000,
+      CPM = abundance[as.character(gene), as.character(cluster)],
+      pct = mean(assay(acc.glm$data)[gene, acc.glm$data$ident == as.character(cluster)] != 0)
+    ) %>%
+    ungroup() %>%
+    mutate(gene = factor(gene, markers))
+  plot_data <- plot_data %>%
+    left_join(
+      plot_data %>% group_by(gene) %>% summarize(maxCPM = max(CPM)), by = "gene"
+    ) %>%
+    mutate(ratioCPM = CPM / maxCPM)
+  plot_data <- plot_data %>%
+    group_by(gene) %>%
+    mutate(scaleCPM = scale(CPM)) %>%
+    ungroup
+
+  ggplot(plot_data, aes(gene, cluster, color=scaleCPM, size=pct)) + geom_point(
+  ) + scale_color_distiller(
+    type = "div", palette = "RdYlBu",
+    guide = guide_colorbar(title = "scale(CPM)", barheight = 3, barwidth = 1)
+  ) + scale_y_discrete(
+    limits = rev
+  ) + scale_size(
+    range = c(0.5, 4)
+  ) + theme_bw() + theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    axis.text.y = element_text(margin = margin(r = 2, t = 5.5, b = 5.5, l = -5)),
+    legend.margin = margin(t = 20)
+  ) + labs(
+    x = NULL, y = NULL, size = "% Expressed"
+  )
 }

@@ -19,6 +19,7 @@ tar_option_set(
     "colorspace",
     "dplyr",
     "forcats",
+    "ggforce",
     "ggnewscale",
     "ggplot2",
     "ggpubr",
@@ -30,6 +31,7 @@ tar_option_set(
     "org.Hs.eg.db",
     "processx",
     "progress",
+    "reshape2",
     "scran",
     "scuttle",
     "Seurat",
@@ -83,7 +85,8 @@ acc_features <- tribble(
   "SPARSE_11", 8, NULL,
   "SPARSE_26", NA, NULL,
   "SPARSE_12", NA, NULL,
-  "SPARSE_3", NA, NULL
+  "SPARSE_3", NA, NULL,
+  "FN1", NA, NULL
 )
 acc_features_max_scale <- 8
 acc_query <- tribble(
@@ -102,7 +105,8 @@ acc_query <- tribble(
 acc_figures = list(
   tar_target(
     fig.acc.annotated,
-    save_figure("figure/ACC/ACC-Annotation.pdf", acc_annotated_figure(acc), width=4, height=3),
+    save_figure("figure/ACC/ACC-Annotation.pdf",
+    acc_annotated_figure(acc, "aneuploidy", guide = "Copy Number", limits = c(0, 0.2), oob_squish = TRUE), width=4, height=3),
     format = "file"
   ),
   tar_target(
@@ -199,10 +203,46 @@ acc_figures = list(
       fig.acc.feature,
       save_figure(
         paste0("figure/ACC/ACC-Feature-Inset-", feature, ".pdf"),
-        nonneg_feature_plot_annotate(acc, feature, max_scale = 8, annotations)
-          + theme(legend.position = "none"),
+        nonneg_feature_plot_annotate(
+          acc, feature, max_scale = 8, annotations = NULL
+        ) + theme(legend.position = "none"),
         width = 2,
         height = 4
+      ),
+      format = "file"
+    ),
+    tar_target(
+      fig.acc.feature.caf,
+      save_figure(
+        paste0("figure/ACC/ACC-Feature-Inset-CAFMarked-", feature, ".pdf"),
+        nonneg_feature_plot_annotate(
+          acc, feature, max_scale = 8, annotations = NULL
+        ) + theme(
+          legend.position = "none",
+          plot.margin = margin(r = 25.5, l = 5.5, t = 5.5, b = 5.5)
+        ) + annotate(
+          "rect", xmin=-2.25, ymin=-9.75, xmax=6.25, ymax=-4.25, fill = "transparent",
+          color = "magenta"
+        ) + annotate(
+          "segment", c(6.25, 6.25), c(-9.75, -4.25), xend=c(9, 9), yend=c(-11, 8.5),
+          color = "magenta"
+        ),
+        width = 2.28,
+        height = 4
+      ),
+      format = "file"
+    ),
+    tar_target(
+      fig.acc.feature.umap.caf,
+      save_figure(
+        paste0("figure/ACC/ACC-Feature-CAF-UMAP-", feature, ".pdf"),
+        nonneg_feature_plot_caf(
+          caf, feature, max_scale = 8
+        ) + theme(
+          legend.position = "none",
+        ),
+        width = 2,
+        height = 3
       ),
       format = "file"
     )
@@ -245,6 +285,27 @@ acc_figures = list(
       acc_dim_plot_individual(acc, "individual"),
       width = 4,
       height = 6
+    )
+  ),
+  tar_target(
+    fig.acc.dotplot,
+    save_figure(
+      "figure/ACC/ACC-Dot-Plot.pdf",
+      acc_dot_plot(
+        acc.glm,
+        c("MYB", "DLL1", "CLDN3", "NOTCH3", "FN1", "MMP11", "CXCL12", "CXCL2", "ACTA2", "PAX7")
+      ),
+      width = 4,
+      height = 3
+    )
+  ),
+  tar_target(
+    fig.acc.cafident,
+    save_figure(
+      "figure/ACC/ACC-CAF-UMAP.pdf",
+      idents_plot_caf(caf),
+      width = 2,
+      height = 2.5
     )
   )
 )

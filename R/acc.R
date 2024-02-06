@@ -177,6 +177,88 @@ write_seurat_column <- function(seurat, column_name, output_path) {
   output_path
 }
 
-# with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_1, SPARSE_14))
-# with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_3, SPARSE_26))
-# with(as.data.frame(acc[['spca']]@cell.embeddings), cor(SPARSE_12, SPARSE_11))
+spcaFeatureTable <- function(acc, group.by="individual") {
+  features <- acc[['spca']]@cell.embeddings >= 5
+  features <- features[, 1:30]
+  apply(
+    features %>% cbind(total_cells = TRUE),
+    2,
+    \(v) table(
+      is_active = v,
+      feature = FetchData(acc, group.by) %>% as.data.frame %>% pull(group.by)
+    )["TRUE", ]
+  )
+}
+
+acc_to_caf_spca <- function(acc) {
+  # Rectangular area identified from accFigures.
+  caf <- acc %>% subset(
+    cells = Cells(acc) %>% subset(
+      FetchData(acc, 'nCount_RNA') %>%
+        cbind(acc[['umap.spca']]@cell.embeddings) %>%
+        with(
+          between(UMAP_1, -2.75, 6.5) & between(UMAP_2, -9.75, -4)
+          & nCount_RNA >= 500000
+        )
+    )
+  )
+  caf <- caf %>%
+    RunUMAP(reduction='spca', dims=1:50, reduction.name='umap.spca') %>%
+    FindNeighbors(reduction='spca', dims=1:30) %>%
+    FindClusters(graph.name = 'RNA_snn', res = 0.5)
+  caf[['spca']]@misc$pct.expl <- manova(
+    spca ~ ident,
+    list(spca = caf[['spca']]@cell.embeddings, ident = Idents(caf))
+  ) %>% with(
+    colSds(fitted.values, useNames = TRUE) / (colSds(fitted.values) + colSds(residuals))
+  )
+  subset_dims <- (caf[['spca']]@misc$pct.expl >= 0.55) %>%
+    which %>% names
+  spca.subset <- CreateDimReducObject(
+    caf[['spca']]@cell.embeddings[, subset_dims],
+    caf[['spca']]@feature.loadings[, subset_dims]
+  )
+  colnames(spca.subset@cell.embeddings) <- colnames(
+    spca.subset@cell.embeddings
+  ) %>%
+    str_replace('SPARSE_', 'SPC')
+  colnames(spca.subset@feature.loadings) <- colnames(
+    spca.subset@feature.loadings
+  ) %>%
+    str_replace('SPARSE_', 'SPC')
+  Key(spca.subset) <- 'spcasubset_'
+  caf[['spca.subset']] <- spca.subset
+  caf <- caf %>% AddMetaData(as.data.frame(spca.subset@cell.embeddings))
+  Idents(caf) <- Idents(caf) %>%
+    fct_recode(pCAF="4", iCAF2="0", iCAF="1", dCAF="2", mCAF="3") %>%
+    fct_relevel(c("dCAF", "iCAF", "iCAF2", "mCAF", "pCAF"))
+  caf
+}
+
+acc_call_idents <- function(acc, caf) {
+  acc <- acc %>% acc_add_components_from_umap
+  Idents(acc) <- Idents(acc) %>% fct_recode(otherCAF="CAF")
+  Idents(acc, cells = Cells(caf)) <- Idents(caf)
+  only.acc <- acc %>% subset(idents = "ACC")
+  only.acc <- only.acc %>% FindNeighbors(reduction="spca", dims=1:30) %>%
+    FindClusters(graph.name = "RNA_snn", res = 0.1)
+  Idents(only.acc) <- Idents(only.acc) %>% fct_recode(
+    luminal="1", myoepithelial="0", otherACC="2"
+  )
+  Idents(acc, cells = Cells(only.acc)) <- Idents(only.acc)
+  acc
+}
+
+acc_glm <- function(counts, colData) {
+  g <- glm_gp(
+    counts,
+    ~ 0 + ident,
+    colData,
+    on_disk = FALSE,
+    verbose = TRUE,
+    size_factors = colData$size_factor
+  )
+  # Dense to sparse for storage
+  assay(g$data) <- counts
+  g
+}
