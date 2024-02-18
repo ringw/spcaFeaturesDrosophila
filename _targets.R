@@ -618,6 +618,47 @@ list(
     acc.spca %>%
       infercnv::add_to_seurat(infercnv_output_path = acc.infercnv.pca)
   ),
+  tar_target(
+    caf,
+    acc %>% acc_to_caf_spca
+  ),
+  tar_target(
+    acc_colData,
+    acc_call_idents(acc, caf) %>%
+      FetchData("ident") %>%
+      as.data.frame %>%
+      mutate(size_factor = pooledSizeFactors(acc[['RNA']]@counts, clusters = ident))
+  ),
+  tar_target(
+    acc.present.genes,
+    (acc[['RNA']]@counts != 0) %>%
+      rowSums %>%
+      `>=`(100) %>%
+      which %>%
+      names %>%
+      union(pan_caf_genes$pCAF) %>%
+      union(pan_caf_genes$parikh_pCAF)
+  ),
+  tar_target(
+    acc.glm,
+    acc_glm(acc[['RNA']]@counts[acc.present.genes,], acc_colData)
+  ),
+  tar_target(
+    pan_caf_genes,
+    list(
+      pCAF=c("CDC45", "CDC25C", "CDK1", "TOP2A", "BIRC5"),
+      parikh_pCAF=c("PAX7", "MYF5"),
+      nCAF=c("CXCR4", "TPD52", "TPD52L1", "APOC1"),
+      iCAF2=c("TNFAIP3", "ICAM1", "CXCL2", "CLU", "BDKRB1"),
+      iCAF=c("CXCL12", "CXCL14", "C3", "CFD"),
+      dCAF=c("STC1", "MMP11", "MMP1", "COL10A1", "COL3A1", "COL1A1"),
+      myCAF=c("MYLK", "MCAM", "TAGLN", "MYH11", "ACTA2")
+    )
+  ),
+  tar_target(
+    acc.spca.profiles,
+    acc %>% acc_add_components_from_umap %>% acc_make_feature_profiles(paste0("SPARSE_", 1:50))
+  ),
   acc_figures,
   tar_combine(acc.figures, acc_figures)
 )
