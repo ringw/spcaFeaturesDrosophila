@@ -81,9 +81,9 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, metafeature
   seurat
 }
 
-seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap, assay='RNA', do.correct.elbow = F) {
-  # Julia will accept an UInt64 random seed.
-  julia_seed = do.call(
+# Generate 16 random hex digits (64 bits).
+runif_uint64 <- function() {
+  do.call(
     paste0,
     append(
       list("0x"),
@@ -94,6 +94,11 @@ seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap
       )
     )
   )
+}
+
+seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap, assay='RNA', do.correct.elbow = F) {
+  # Julia will accept an UInt64 random seed.
+  julia_seed = runif_uint64()
   covar = seurat@misc[[matrix_name]]
   feature_loadings = run_optimal_spca(covar, K=varnum, D=npcs, search_cap=search_cap, eigen_gap=eigen_gap, uint64_seed=julia_seed)
   # Fix the signs of feature loadings using the median sign.

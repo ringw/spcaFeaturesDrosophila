@@ -17,6 +17,7 @@ tar_option_set(
     "apeglm",
     "basilisk",
     "colorspace",
+    "DelayedArray",
     "dplyr",
     "forcats",
     "ggforce",
@@ -25,6 +26,7 @@ tar_option_set(
     "ggpubr",
     "ggrastr",
     "glmGamPoi",
+    "HDF5Array",
     "infercnv",
     "Matrix",
     "MatrixGenerics",
@@ -34,9 +36,11 @@ tar_option_set(
     "progress",
     "reshape2",
     "scales",
+    "scDblFinder",
     "scran",
     "scuttle",
     "Seurat",
+    "SingleCellExperiment",
     "stringr",
     "tibble",
     "viridis",
@@ -571,6 +575,11 @@ list(
   ),
   tar_target(acc.rna, preprocess_acc(acc.counts, acc.rownames)),
   tar_target(
+    acc.scDblFinder,
+    SingleCellExperiment(list(counts = acc.rna[['RNA']]@counts)) %>%
+      scDblFinder
+  ),
+  tar_target(
     acc.spca.dimreduc,
     RunSparsePCA(
       acc.rna, 'covar', varnum=10, npcs=50, eigen_gap=0.05, search_cap=100000
@@ -616,7 +625,9 @@ list(
   tar_target(
     acc,
     acc.spca %>%
-      infercnv::add_to_seurat(infercnv_output_path = acc.infercnv.pca)
+      infercnv::add_to_seurat(infercnv_output_path = acc.infercnv.pca) %>%
+      AddMetaData(acc.scDblFinder$scDblFinder.class, "scDblFinder.class") %>%
+      AddMetaData(acc.scDblFinder$scDblFinder.score, "scDblFinder.score")
   ),
   tar_target(
     caf,
@@ -660,5 +671,141 @@ list(
     acc %>% acc_add_components_from_umap %>% acc_make_feature_profiles(paste0("SPARSE_", 1:50))
   ),
   acc_figures,
-  tar_combine(acc.figures, acc_figures)
+  tar_combine(acc.figures, acc_figures),
+
+  # Mouse 10X 1MM cells: cortex and hippocampus
+  tar_target(
+    mouse_ch,
+    "/mnt/data/expression_matrix.hdf5"
+  ),
+  tar_target(
+    mouse_numi,
+    mouse_ch %>% readMouseExpressionMatrix %>% rowSums
+  ),
+  tar_target(mouse_numi_min, 5000),
+  tar_target(
+    mouse_hvgs_sample,
+    mouse_ch %>% readMouseExpressionMatrix %>% filterMouseExpressionMatrix %>% computeMouseHVGs,
+    cue = tar_cue("never")
+  ),
+  tar_target(
+    mouse_hvgs_sample_vec,
+    mouse_hvgs_sample %>% arrange(desc(vst.variance.standardized)) %>% rownames %>% head(2000)
+  ),
+  tar_target(
+    mouse_hvgs_partition,
+    mouse_hvgs_sample_vec %>%
+      split(cut(seq_along(.), seq(0, 2000, by=250))) %>%
+      setNames(paste0("part", seq_along(.)))
+  ),
+  tar_target(
+    mouse_scale_data,
+    mouse_ch %>% readMouseExpressionMatrix %>%
+      scale_genes_from_list(
+        mouse_numi,
+        (mouse_numi >= mouse_numi_min) %>% which %>% names,
+        mouse_hvgs_partition[[1]]
+      ),
+    pattern = map(mouse_hvgs_partition),
+    iteration = "list"
+  ),
+  tar_target(
+    mouse_scale_data_rhs,
+    mouse_scale_data,
+    pattern = map(mouse_scale_data),
+    iteration = "list"
+  ),
+  tar_target(
+    mouse_covar_branched,
+    var(as.matrix(mouse_scale_data), as.matrix(mouse_scale_data_rhs)),
+    pattern = cross(mouse_scale_data, mouse_scale_data_rhs),
+    iteration = "list"
+  ),
+  tar_target(
+    mouse_covar,
+    assign_matrix_blocks(mouse_hvgs_sample_vec, mouse_covar_branched)
+  ),
+  tar_target(
+    mouse_feature_loadings,
+    run_optimal_spca(
+      mouse_covar, K=5, D=100, eigen_gap=0.01, search_cap=500000,
+      uint64_seed=runif_uint64()
+    ) %>%
+      matrix(
+        nrow = nrow(.),
+        ncol = ncol(.),
+        dimnames = list(paste0("SPARSE_", seq(nrow(.)), colnames(.)))
+      )
+  ),
+  tar_target(
+    mouse_cell_embeddings_blocked,
+    (
+      mouse_scale_data %*%
+      t(mouse_feature_loadings[, colnames(mouse_scale_data)])
+    ) %>% as.matrix,
+    pattern = map(mouse_scale_data)
+  ),
+  tar_target(
+    mouse_cell_embeddings,
+    (
+      Diagonal(
+        x = mouse_numi %>%
+          subset(. >= mouse_numi_min) %>%
+          replace(seq_along(.), 1),
+        names = TRUE
+      ) %>%
+        list %>%
+        rep(nrow(mouse_cell_embeddings_blocked) / nrow(.[[1]])) %>%
+        do.call(cbind, .)
+      %*%
+        mouse_cell_embeddings_blocked
+    ) %>%
+      as.matrix
+  ),
+  # Gene counts of interest for the mouse experiment.
+  tar_target(
+    mouse_foi,
+    c(
+      "Cbln4",
+      "Cp",
+      "Egln3",
+      "Igfbp6",
+      "Jam2",
+      "Krt73",
+      "Lamp5",
+      "Lhx6",
+      "Lmo1",
+      "Mybpc1",
+      "Npy2r",
+      "Ntng1",
+      "Pax6",
+      "Pcdh11x",
+      "Pdlim5",
+      "Serpinf1",
+      "Sncg",
+      "Rspo1",
+      "Vip"
+    )
+  ),
+  tar_target(
+    mouse_coi,
+    (
+      (mouse_ch %>% readMouseExpressionMatrix)[
+        mouse_numi %>% subset(. >= mouse_numi_min) %>% names, mouse_foi
+      ]
+    ) %>%
+      as.matrix %>%
+      t
+  ),
+  tar_target(
+    mouse,
+    seurat_spca_only(
+      t(mouse_feature_loadings), mouse_cell_embeddings, mouse_coi
+    ) %>%
+      seurat_normalize_by_numi(mouse_numi[Cells(.)])
+  ),
+  tar_target(
+    mouse.sample,
+    mouse %>% subset(cells = Cells(.) %>% sample(200000))
+  )
 )
