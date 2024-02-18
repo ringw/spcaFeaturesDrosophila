@@ -62,11 +62,54 @@ midgut_figures = list(
   tar_target(
     fig.indrop.spca,
     save_figure(
-      "figure/Midgut/UMAP-1-SPCA.pdf",
+      "figure/Midgut/UMAP-5-SPCA.pdf",
       plot_indrop_spca(indrop),
       width = 5, height = 4
     ),
     format = "file"
+  ),
+  tar_target(
+    fig.indrop.legend,
+    save_figure(
+      "figure/Midgut/UMAP-Legend.pdf",
+      plot_midgut_legend(indrop),
+      width = 4, height = 0.6
+    ),
+    format = "file"
+  ),
+  tar_target(
+    fig.indrop.pca.ec,
+    save_figure(
+      "figure/Midgut/UMAP-3-PCA-EC.pdf",
+      plot_midgut_feature(indrop, "PCA", "umap", "betaTry"),
+      width = 5, height = 4
+    ),
+    format = "file"
+  ),
+  tar_target(
+    fig.indrop.spca.ec,
+    save_figure(
+      "figure/Midgut/UMAP-7-SPCA-EC.pdf",
+      plot_midgut_feature(indrop, "SPCA", "umap.spca", "betaTry"),
+      width = 5, height = 4
+    ),
+    format = "file"
+  ),
+  tar_target(
+    fig.indrop.legend.ec,
+    save_figure(
+      "figure/Midgut/UMAP-betaTry-Legend.pdf",
+      plot_midgut_feature_legend(indrop, "betaTry"),
+      width = 2.65, height = 0.6
+    )
+  ),
+  tar_target(
+    fig.indrop.model.background.legend,
+    save_figure(
+      "figure/Midgut/Model-Background-Legend.pdf",
+      plot_midgut_model_background_legend(),
+      width = 2, height = 0.6
+    )
   )
 )
 
@@ -508,6 +551,8 @@ list(
     indrop.misc,
     build_midgut_misc_stats(indrop, indrop.sct.pca)
   ),
+  midgut_figures,
+  tar_combine(midgut.figures, midgut_figures),
 
   # Adenoid Cystic Carcinoma sample
   tar_download(

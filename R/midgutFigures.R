@@ -15,6 +15,12 @@ midgut.col = as.list(midgut.colors)
 midgut.model.colors.bg = c(PCA=hcl(30, 8, 99), SPCA=hcl(129,7,98))
 midgut.model.colors.legend = c(PCA=hcl(30, 12, 95), SPCA=hcl(129,11,95))
 
+# Outlier cells in the -UMAP_2 direction in PCA-UMAP:
+# > sum(indrop[['umap']]@cell.embeddings[, "UMAP_2"] < -9.5)
+# 24
+# > sum(indrop[['umap.spca']]@cell.embeddings[, "umapspca_2"] < -9.5)
+# 0
+
 plot_indrop_pca <- function(indrop) (
   indrop@meta.data %>% cbind(as.data.frame(indrop[['umap']]@cell.embeddings)) %>%
   arrange(pca_classif != 'unknown') %>%
@@ -46,4 +52,57 @@ plot_indrop_spca <- function(indrop) (
     axis.ticks = element_line(color='transparent'),
     panel.background = element_rect(fill=midgut.model.colors.bg[2])
   )
+)
+
+plot_midgut_legend <- function(indrop) get_legend(
+  indrop@meta.data %>% cbind(as.data.frame(indrop[['umap']]@cell.embeddings))
+  %>% arrange(pca_classif != 'unknown')
+  %>% ggplot(aes(UMAP_1,UMAP_2, color=pca_classif))
+  + geom_point(size=2)
+  + scale_color_manual(values=midgut.colors %>% setNames(names(.) %>% str_replace('bg','unknown')))
+  + theme_bw() + theme(legend.direction='horizontal')
+  + labs(color=NULL)
+)
+
+plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name) (
+  indrop[[embedding]]@cell.embeddings %*%
+    matrix(diag(2), nrow=2, dimnames=list(NULL, c("UMAP_1", "UMAP_2"))) %>%
+    as.data.frame %>%
+    cbind(indrop@meta.data) %>%
+    cbind(FetchData(indrop, feature_name) %>% pull(1) %>% matrix(ncol = 1, dimnames=list(names(.), "feature"))) %>%
+  ggplot(aes(UMAP_1, UMAP_2, color=feature))
+  + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
+  + theme_bw()
+  + scale_y_continuous(limits=c(-9.5,NA), expand=rep(0.02,2), breaks=pretty_breaks(3))
+  + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
+  + scale_color_viridis_c(option='magma')
+  + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
+  + theme(
+    axis.ticks = element_line(color='transparent'),
+    panel.background = element_rect(fill=midgut.model.colors.bg[bg_color])
+  )
+)
+
+plot_midgut_feature_legend <- function(indrop, feature_name) get_legend(
+  plot_midgut_feature(indrop, "PCA", "umap", feature_name)
+    + geom_point()
+    + labs(color="LogNormalize")
+    + theme_bw()
+    + theme(legend.direction = "horizontal")
+)
+
+plot_midgut_model_background_legend <- function() get_legend(
+  data.frame(
+    name=c('PCA','SPCA')
+  )
+  %>%
+  ggplot(aes(0,0,fill=name,color=name))
+  # R shape 15 = square
+  # + geom_point(size=4, shape=15)
+  + geom_tile()
+  + scale_fill_manual(values=midgut.model.colors.legend)
+  + scale_color_manual(values=rep('black', 2), guide=guide_legend(override.aes = list()))
+  + labs(color='model', fill='model')
+  + theme_bw()
+  + theme(legend.direction='horizontal')
 )
