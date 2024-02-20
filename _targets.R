@@ -70,6 +70,24 @@ midgut_figures = list(
     format = "file"
   ),
   tar_target(
+    fig.indrop.pca.new,
+    save_figure(
+      "figure/Midgut/Feature-PCA-Clustering.pdf",
+      plot_indrop_pca(indrop),
+      width = 5, height = 4
+    ),
+    format = "file"
+  ),
+  tar_target(
+    fig.indrop.spca.new,
+    save_figure(
+      "figure/Midgut/Feature-SPCA-Clustering.pdf",
+      plot_indrop_spca(indrop),
+      width = 5, height = 4
+    ),
+    format = "file"
+  ),
+  tar_target(
     fig.indrop.legend,
     save_figure(
       "figure/Midgut/UMAP-Legend.pdf",
