@@ -538,29 +538,38 @@ list(
         Idents(.) %>% fct_recode(
           ISC='14', EB='5',
           `EC-like`='0',
-          EC.anterior='1',
+          # Amy-p high
+          EC.anterior1='1',
           `copper/iron`='2',
-          EC2='3',
+          # betaTry highest
+          EC.anterior2='3',
           dEC1='4',
-          EC3='6',
-          EC4='7',
+          # Amy-p highest
+          EC.anterior3='6',
+          # LManVI highest
+          EC.posterior1='7',
           EE1='8',
           LFC1='9',
           dEC2='10',
           EE2='11',
-          EC5='12',
+          # Gs2 highest. Note however that CG13315 is also high.
+          EC.posterior2='12',
           others.1='13',
           cardia='15',
-          EC6='16',
-          EC7='17',
+          # Vha16-1+ and CG13315 high
+          EC.meso='16',
+          # Npc2f+
+          EC.anterior4='17',
           `EC-like2`='18',
           LFC2='19',
           others.2='20',
-          EC8='21',
+          # Mur29B high
+          EC.posterior3='21',
           `EC-like3`='22',
           others.3='23',
           `EC-like4`='24',
-          EC9='25'
+          # Mur29B highest
+          EC.posterior4='25'
         ) %>% fct_relevel('ISC', 'EB'),
         'spca_clusters'
       ) %>%
