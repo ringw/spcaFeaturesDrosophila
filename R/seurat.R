@@ -185,10 +185,29 @@ midgut_classify_cell_types <- function(seurat, colname) {
     'LFC',
     'cardia'
   )
+  midgut_subclassif_levels = c(
+    'ISC',
+    'EB',
+    'dEC',
+    'aEC',
+    'EC-like',
+    'mEC',
+    'pEC',
+    'E E',
+    'copper/iron',
+    'LFC',
+    'cardia'
+  )
   seurat@meta.data[, str_replace(colname, 'clusters', 'classif')] = (
     seurat@meta.data[, colname]
     %>% fct_relabel(\(names) str_replace(names, '\\..*|[0-9]+', ''))
     %>% fct_relevel(midgut_levels)
+  )
+  seurat@meta.data[, str_replace(colname, 'clusters', 'subclassif')] = (
+    seurat@meta.data[, colname]
+    %>% fct_relabel(\(names) str_replace(names, '(?<=EE|others)\\..*|[0-9]+', ''))
+    %>% fct_recode(aEC="EC.anterior", mEC="EC.meso", pEC="EC.posterior") %>%
+      fct_relevel(midgut_subclassif_levels)
   )
   seurat
 }
