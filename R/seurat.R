@@ -281,3 +281,12 @@ build_midgut_misc_stats <- function(indrop, indrop.sct.pca, npcs=25) {
     pca.to.spca.shrink.var=pca.to.spca.shrink.var
   )
 }
+
+# Replace a singular vector with the negation, etc, for illustrative purposes.
+# Will be used for cosmetic tweaks to the non-sparse PCA model.
+replace_pca_embedding_feature <- function(seurat, column_name, fn) {
+  seurat[['pca']]@cell.embeddings[, column_name] <- seurat[[
+    'pca'
+  ]]@cell.embeddings[, column_name] %>% fn
+  seurat
+}

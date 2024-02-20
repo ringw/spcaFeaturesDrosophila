@@ -574,7 +574,17 @@ list(
         ) %>% fct_relevel('ISC', 'EB', 'EC.anterior1'),
         'pca_clusters'
       ) %>%
-      midgut_classify_cell_types('pca_clusters')
+      midgut_classify_cell_types('pca_clusters') %>%
+      # We found that PC3 has a heavy right tail containing most of the EC
+      # cells. It has a long tail of other EC cells, but that tail is low in
+      # density and we will put that tail in the negative direction.
+      replace_pca_embedding_feature(
+        "PC_3", \(v) -v * sign(v)[which.max(abs(v))]
+      ) %>%
+      # EB (the extreme values of PC7) should be positive.
+      replace_pca_embedding_feature(
+        "PC_7", \(v) v * sign(v)[which.max(abs(v))]
+      )
   ),
   tar_target(
     indrop.spca.dimreduc,
