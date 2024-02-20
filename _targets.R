@@ -593,6 +593,49 @@ list(
     build_de_data(indrop.glm, indrop.present.genes)
   ),
   tar_target(
+    indrop.dot.plot.params,
+    tibble(
+      rowname = names(indrop.glm),
+      dispersion_trend = indrop.glm %>%
+        sapply(
+          \(m) setNames(
+            m$overdispersion_shrinkage_list$dispersion_trend,
+            names(m$overdispersions)
+          ),
+        simplify=F
+      )
+    ) %>%
+      left_join(
+        tribble(
+          ~rowname, ~ident,
+          "pca_clusters", "pca_subclassif",
+          "spca_clusters", "spca_subclassif"
+        ),
+        "rowname"
+      ) %>%
+    column_to_rownames
+  ),
+  tar_map(
+    tibble(name=c("pca_clusters", "spca_clusters")),
+    tar_target(
+      indrop.glm.dispersions,
+      with(
+        indrop.glm[[name]],
+        overdispersion_shrinkage_list$dispersion_trend %>%
+          setNames(names(overdispersions))
+      )[indrop.present.genes]
+    ),
+    tar_target(
+      indrop.pct.expressed,
+      indrop[['RNA']][indrop.present.genes, ] %>%
+        t %>%
+        as.data.frame %>%
+        split(FetchData(indrop, str_replace(name, "pca_clusters", "pca_subclassif"))[, 1]) %>%
+        `!=`(0) %>%
+        sapply(colMeans)
+    )
+  ),
+  tar_target(
     indrop.misc,
     build_midgut_misc_stats(indrop, indrop.sct.pca)
   ),
