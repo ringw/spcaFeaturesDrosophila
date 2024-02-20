@@ -17,6 +17,7 @@ tar_option_set(
     "apeglm",
     "basilisk",
     "colorspace",
+    "cowplot",
     "dplyr",
     "forcats",
     "ggforce",
@@ -188,6 +189,39 @@ midgut_figures = list(
       ),
       width = 6.4, height = 4.8, device = cairo_pdf
     )
+  ),
+  tar_target(
+    midgut.cdf.cluster.list, c("ISC", "EB", "dEC", "EC", "EC-like", "EE")
+  ),
+  tar_target(
+    indrop.violin.pcs,
+    c(SPC1="SPARSE_1", SPC22="SPARSE_22", PC3="PC_3", PC7="PC_7") %>%
+      enframe
+  ),
+  tar_target(
+    fig.indrop.violin,
+    save_figure(
+      paste0("figure/Midgut/Indrop-Violin-", indrop.violin.pcs$name, ".pdf"),
+      tiny_violin_plot(
+        indrop, "spca_classif", midgut.cdf.cluster.list, indrop.violin.pcs$value
+      ),
+      width=3.25, height=2
+    ),
+    pattern = map(indrop.violin.pcs),
+    format = "file"
+  ),
+  tar_target(
+    indrop.cdf.spcs, c(1, 22)
+  ),
+  tar_target(
+    fig.indrop.cdf,
+    save_figure(
+      paste0("figure/Midgut/Indrop-CDF-SPC", indrop.cdf.spcs, ".pdf"),
+      plot_spca_cdf(indrop, "spca_classif", midgut.cdf.cluster.list, indrop.cdf.spcs),
+      width=3.25, height=2
+    ),
+    pattern = map(indrop.cdf.spcs),
+    format = "file"
   )
 )
 
