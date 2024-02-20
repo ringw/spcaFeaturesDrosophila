@@ -146,6 +146,48 @@ midgut_figures = list(
       plot_midgut_model_background_legend(),
       width = 2, height = 0.6
     )
+  ),
+  tar_target(
+    indrop.dot.plot.features,
+    c(
+      "esg", "Dl", "E(spl)mbeta-HLH", "Rel",
+      # dEC-enriched:
+      "fmt", "trol",
+      # aEC markers (also EC-like):
+      "betaTry",
+      "Amy-p",
+      "Vha16-1",
+      "Gs2",
+      "MtnC",
+      "mag",
+      "Pgant4",
+      "pros",
+      "EbpIII"
+    )
+  ),
+  tar_target(
+    fig.indrop.dots.pca,
+    save_figure(
+      "figure/Midgut/Dot-Plot-Indrop-PCA.pdf",
+      midgut_dot_plot(
+        indrop.cpm_pca_subclassif[indrop.dot.plot.features, ],
+        indrop.pct.expressed_pca_subclassif[indrop.dot.plot.features, ],
+        midgut.model.colors.bg["PCA"]
+      ),
+      width = 6.4, height = 4.8, device = cairo_pdf
+    )
+  ),
+  tar_target(
+    fig.indrop.dots.spca,
+    save_figure(
+      "figure/Midgut/Dot-Plot-Indrop-SPCA.pdf",
+      midgut_dot_plot(
+        indrop.cpm_spca_subclassif[indrop.dot.plot.features, ],
+        indrop.pct.expressed_spca_subclassif[indrop.dot.plot.features, ],
+        midgut.model.colors.bg["SPCA"]
+      ),
+      width = 6.4, height = 4.8, device = cairo_pdf
+    )
   )
 )
 
@@ -592,47 +634,32 @@ list(
     indrop.deg,
     build_de_data(indrop.glm, indrop.present.genes)
   ),
-  tar_target(
-    indrop.dot.plot.params,
-    tibble(
-      rowname = names(indrop.glm),
-      dispersion_trend = indrop.glm %>%
-        sapply(
-          \(m) setNames(
-            m$overdispersion_shrinkage_list$dispersion_trend,
-            names(m$overdispersions)
-          ),
-        simplify=F
-      )
-    ) %>%
-      left_join(
-        tribble(
-          ~rowname, ~ident,
-          "pca_clusters", "pca_subclassif",
-          "spca_clusters", "spca_subclassif"
-        ),
-        "rowname"
-      ) %>%
-    column_to_rownames
-  ),
   tar_map(
-    tibble(name=c("pca_clusters", "spca_clusters")),
+    tibble(name=c("pca_subclassif", "spca_subclassif")),
     tar_target(
-      indrop.glm.dispersions,
+      indrop.glm.dispersion.param,
       with(
-        indrop.glm[[name]],
+        indrop.glm[[name %>% str_replace("pca_subclassif", "pca_clusters")]],
         overdispersion_shrinkage_list$dispersion_trend %>%
           setNames(names(overdispersions))
-      )[indrop.present.genes]
+      )
+    ),
+    tar_target(
+      indrop.glm.abundances,
+      build_glm_cpm(indrop, name, indrop.glm.dispersion.param)
+    ),
+    tar_target(
+      indrop.cpm,
+      predict_glm_cpm(indrop.glm.abundances)
     ),
     tar_target(
       indrop.pct.expressed,
-      indrop[['RNA']][indrop.present.genes, ] %>%
+      indrop[['RNA']] %>%
+        GetAssayData %>%
         t %>%
         as.data.frame %>%
-        split(FetchData(indrop, str_replace(name, "pca_clusters", "pca_subclassif"))[, 1]) %>%
-        `!=`(0) %>%
-        sapply(colMeans)
+        split(FetchData(indrop, name)[, 1]) %>%
+        sapply(\(df) colMeans(as.matrix(df) != 0))
     )
   ),
   tar_target(

@@ -138,3 +138,47 @@ plot_midgut_model_background_legend <- function() get_legend(
   + theme_bw()
   + theme(legend.direction='horizontal')
 )
+
+midgut_dot_plot <- function(cpm_data, pct_data, bg_color=waiver()) {
+  names(dimnames(cpm_data)) = c("gene", "cluster")
+  names(dimnames(pct_data)) = c("gene", "cluster")
+  scale_cpm_data <- cpm_data %>% t %>% scale %>% t
+  plot_data <- melt(scale_cpm_data, value.name="scaleCPM") %>%
+    inner_join(
+      melt(pct_data, value.name="pct"),
+      join_by(gene, cluster)
+    )
+  plot_data$gene <- plot_data$gene %>% factor(rownames(cpm_data)) %>%
+    display_gene_names
+  plot_data <- plot_data %>% mutate(
+    is_faint = ifelse(between(scaleCPM, 1, 1.75), "present", "absent"),
+    is_faint_or_high = ifelse(scaleCPM > 1, "present", "absent")
+  )
+
+  ggplot(plot_data, aes(gene, cluster, color=is_faint_or_high, fill=scaleCPM, size=pct)) + geom_point(
+    pch=21, stroke=0.1
+  ) + scale_fill_distiller(
+    type = "div", palette = "RdYlBu",
+    limits = c(-0.5, 2.99), oob=squish,
+    guide = guide_colorbar(title = "scale(CPM)", barheight = 3, barwidth = 1)
+  ) + scale_color_manual(
+    # Is faint (very light yellow) color or a higher color: Show a very dim stroke around
+    # the point.
+    values = c(absent="transparent", present="#33333333"),
+    guide = guide_none()
+  ) + scale_y_discrete(
+    limits = rev
+  ) + scale_size(
+    labels = percent,
+    range = c(0.1, 4),
+    guide = guide_legend(override.aes = list(fill = "black"))
+  ) + theme_bw() + theme(
+    panel.background = element_rect(fill = bg_color),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    axis.text.y = element_text(margin = margin(r = 2, t = 5.5, b = 5.5, l = -5)),
+    legend.margin = margin(t = 20)
+  ) + labs(
+    x = NULL, y = NULL, size = "% Expressed"
+  )
+}

@@ -1,7 +1,7 @@
-save_figure <- function(file, file_plot, width, height) {
+save_figure <- function(file, file_plot, width, height, device = NULL) {
   dir.create(dirname(dirname(file)), showW = FALSE)
   dir.create(dirname(file), showW = FALSE)
-  ggsave(file, file_plot, width=width, height=height, dpi=120)
+  ggsave(file, file_plot, width=width, height=height, dpi=120, device=device)
   return(file)
 }
 

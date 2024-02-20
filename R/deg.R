@@ -13,11 +13,58 @@ build_glms <- function(seurat, all_sizes, columns_to_fit) {
         on_disk = F,
         verbose = T
       )
+      # Use sparseMatrix for counts, not matrix.
       assay(g$data) = seurat[['RNA']]@counts
       g
     },
     simplify=F
   )
+}
+
+build_glm_cpm <- function(seurat, column_to_fit, dispersion_trend) {
+  size_factors <- FetchData(seurat, c("size_factor", "nCount_RNA", column_to_fit)) %>%
+    rownames_to_column %>%
+    list %>%
+    append(rlang::syms(column_to_fit)) %>%
+    do.call(group_by, .) %>%
+    mutate(
+      # Normalization factor: Take all cells in the cluster (the group) - the
+      # estimate for these cells coming from the summed size factor. Add 1MM
+      # multiplier. Normalize out the sum of UMI counts for the cells.
+      cpm_scalar = sum(size_factor) * 1000 * 1000 / sum(nCount_RNA),
+      # Take away the normalization factor (divide out) when building the model.
+      # Then the coefficients will be ln-CPM (log link function).
+      cpm_size_factor = size_factor / cpm_scalar
+    )
+  g <- glm_gp(
+    seurat[['RNA']]@counts,
+    ~ 0 + ident,
+    seurat@meta.data %>% mutate(ident = FetchData(seurat, column_to_fit)[, 1]),
+    size_factors = size_factors$cpm_size_factor,
+    overdispersion = dispersion_trend,
+    overdispersion_shrinkage = F,
+    on_disk = F,
+    verbose = T
+  )
+  # Use sparseMatrix for counts, not matrix.
+  assay(g$data) = seurat[['RNA']]@counts
+  g
+}
+
+predict_glm_cpm <- function(glm.cpm) {
+  cpm <- predict(
+    glm.cpm,
+    diag(ncol(glm.cpm$Beta)) %>%
+      matrix(
+        nrow=nrow(.),
+        ncol=ncol(.),
+        dimnames=rep(list(colnames(glm.cpm$Beta)), 2)
+      ),
+    offset=0,
+    type="response"
+  )
+  colnames(cpm) <- colnames(cpm) %>% str_replace("^ident", "")
+  cpm
 }
 
 build_present_gene_list <- function(seurat, columns) {
