@@ -96,6 +96,42 @@ midgut_figures = list(
     format = "file"
   ),
   tar_target(
+    indrop.feature.list,
+    c(
+      # For calling ISC and EB cluster labels:
+      "esg", "pros", "E(spl)mbeta-HLH", "N", "Dl",
+      # aEC markers:
+      "betaTry", "Amy-p", "Jon65Aiv",
+      # mEC
+      "CG13315", "Vha16-1",
+      # pEC
+      "LManVI", "Gs2", "Mur29B",
+      # Novel markers (DE-CI)
+      "His3.3A",
+      # Others (not called yet as dEC markers?)
+      "fmt", "trol"
+    )
+  ),
+  tar_target(
+    indrop.feature.printing,
+    tribble(~name, ~embedding, "PCA", "umap", "SPCA", "umap.spca")
+  ),
+  tar_target(
+    fig.indrop.feature,
+    save_figure(
+      paste0("figure/Midgut/Feature-", indrop.feature.printing %>% pull(name), "-", indrop.feature.list, ".pdf"),
+      plot_midgut_feature(
+        indrop,
+        bg_color=indrop.feature.printing %>% pull(name),
+        indrop.feature.printing %>% pull(embedding),
+        indrop.feature.list
+      ),
+      width = 5, height = 4
+    ),
+    format = "file",
+    pattern = cross(indrop.feature.list, indrop.feature.printing)
+  ),
+  tar_target(
     fig.indrop.legend.ec,
     save_figure(
       "figure/Midgut/UMAP-betaTry-Legend.pdf",
