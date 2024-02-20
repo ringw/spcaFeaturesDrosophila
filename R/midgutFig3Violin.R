@@ -41,7 +41,7 @@ tiny_violin_plot <- function(seurat, column_to_use, levels_to_use, feature_to_us
   ) + labs(
     x = NULL, y = NULL
   ) + theme(
-    plot.margin = margin(0), aspect.ratio = 0.618
+    plot.margin = margin(1, 1, 1, 1), aspect.ratio = 0.618
   )
 }
 
@@ -80,6 +80,8 @@ plot_spca_cdf <- function(seurat, column_to_use, levels_to_use, spca_index) {
   ) + labs(
     x=NULL, y=NULL
   ) + theme_cowplot() + theme(
-    plot.margin = margin(0), aspect.ratio = 0.618
+    plot.margin = margin(1, 1, 1, 1), aspect.ratio = 0.618,
+    # y-labels still didn't have enough space at the top with 1pt margin.
+    axis.text.y = element_text(vjust = 0.7)
   )
 }
