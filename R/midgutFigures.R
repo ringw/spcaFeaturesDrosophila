@@ -23,7 +23,7 @@ midgut.model.colors.legend = c(PCA=hcl(30, 12, 95), SPCA=hcl(129,11,95))
 
 plot_indrop_pca_annotations <- tribble(
   ~UMAP_1, ~UMAP_2, ~label,
-  -8.75, 1.1, "aEC",
+  -9, 1.1, "aEC",
   0.8, -8.25, "aEC",
   7.75, 0.5, "aEC",
   11, 2, "mEC",
@@ -41,7 +41,7 @@ plot_indrop_pca <- function(indrop) (
   + scale_y_continuous(limits=c(-9.5,NA), expand=rep(0.02,2), breaks=pretty_breaks(3))
   + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
-    aes(label=label), data=plot_indrop_pca_annotations, color="black", size=2.5
+    aes(label=label), data=plot_indrop_pca_annotations, color="black", size=3
   )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
@@ -52,14 +52,14 @@ plot_indrop_pca <- function(indrop) (
 
 plot_indrop_spca_annotations <- tribble(
   ~umapspca_1, ~umapspca_2, ~label,
-  -5.5, 1, "aEC",
+  -6, 1, "aEC",
   0, -7.5, "aEC",
-  4.25, 9, "mEC",
-  2.55, 2.05, "pEC"
+  4.35, 9, "mEC",
+  2.65, 2, "pEC"
 )
 
 plot_indrop_spca_connectors <- tribble(
-  ~x, ~y, ~xend, ~yend, 2.4, 2.25, 1, 2.8, 2.8, 1.95, 6, 1
+  ~x, ~y, ~xend, ~yend, 2.1, 2.15, 1, 2.8, 3.1, 1.55, 5.75, 0.75
 )
 
 plot_indrop_spca <- function(indrop) (
@@ -73,7 +73,7 @@ plot_indrop_spca <- function(indrop) (
   + scale_y_continuous(limits=c(-9.5,NA), expand=rep(0.02,2), breaks=pretty_breaks(3))
   + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
-    aes(label=label), data=plot_indrop_spca_annotations, color="black", size=2.5
+    aes(label=label), data=plot_indrop_spca_annotations, color="black", size=3
   )
   + geom_segment(
     aes(x=x, y=y, xend=xend, yend=yend),
