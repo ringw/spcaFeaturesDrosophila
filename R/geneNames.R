@@ -1,7 +1,8 @@
 gene_names <- list(
   Dl='Delta',
   `E(spl)malpha-BFM`="E(spl)m\u03B1",
-  `E(spl)mbeta-HLH`="E(spl)m\u03B2"
+  `E(spl)mbeta-HLH`="E(spl)m\u03B2",
+  betaTry="\u03B2Try"
 )
 
 feature_names <- gene_names %>%
