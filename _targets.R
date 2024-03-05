@@ -14,7 +14,6 @@ library(tibble)
 tar_option_set(
   packages = c(
     "AnnotationDbi",
-    "apeglm",
     "basilisk",
     "colorspace",
     "cowplot",
@@ -746,7 +745,8 @@ list(
   ),
   tar_target(
     indrop.deg,
-    build_de_data(indrop.glm, indrop.present.genes)
+    build_de_data(indrop.glm, indrop.present.genes),
+    packages = "apeglm"
   ),
   tar_map(
     tibble(name=c("pca_subclassif", "spca_subclassif")),
