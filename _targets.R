@@ -26,6 +26,7 @@ tar_option_set(
     "ggpubr",
     "ggrastr",
     "glmGamPoi",
+    "grDevices",
     "infercnv",
     "Matrix",
     "MatrixGenerics",
