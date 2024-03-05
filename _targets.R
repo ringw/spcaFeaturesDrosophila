@@ -607,6 +607,56 @@ list(
       )
   ),
   tar_target(
+    indrop.spca.param.k.input,
+    tibble(k = 1:25)
+  ),
+  tar_target(
+    indrop.spca.param.k,
+    indrop.spca.param.k.input %>%
+      rowwise %>%
+      mutate(
+        dimreduc = indrop.pca %>%
+          seurat_spca("covar", varnum=k, npcs=1, eigen_gap=0.01, search_cap=500000) %>%
+          list
+      ),
+    pattern = map(indrop.spca.param.k.input)
+  ),
+  tar_target(
+    indrop.pca.quickCluster,
+    indrop.pca %>%
+      FindNeighbors(dims = 1:findPC(indrop.pca[['pca']]@stdev)) %>%
+      FindClusters(res = 0.1) %>%
+      Idents,
+    packages = "findPC"
+  ),
+  tar_target(
+    indrop.spca.modsel.features,
+    rowAnys(
+      indrop.spca.param.k %>%
+        pull(dimreduc) %>%
+        sapply(\(dimreduc) dimreduc@feature.loadings[, "SPARSE_1"]) %>%
+        `!=`(0),
+      useNames = TRUE
+    ) %>%
+      which %>%
+      names
+  ),
+  tar_target(
+    indrop.spca.select.k,
+    indrop.spca.param.k %>%
+      rowwise %>%
+      mutate(
+        logLik = score_univariate_mixture_model(
+          indrop.pca[["RNA"]],
+          indrop.spca.modsel.features,
+          dimreduc@feature.loadings[, "SPARSE_1"],
+          indrop.pca.quickCluster
+        ),
+        .keep = "unused"
+      ),
+    packages = "mvtnorm"
+  ),
+  tar_target(
     indrop.spca.dimreduc,
     RunSparsePCA(
       indrop.pca, 'covar', varnum=8, npcs=60, eigen_gap=0.05, search_cap=500000
@@ -730,6 +780,93 @@ list(
     indrop.misc,
     build_midgut_misc_stats(indrop, indrop.sct.pca)
   ),
+
+  # Midgut 10X Genomics batch recapitulation
+  tar_target(
+    tenx.pca,
+    # esg may be included as an spca gene as it helps separate ISC from dEC, and
+    # also separates EB (esg hi, reason unknown) from ISC (esg mid).
+    midgut_seurat_for_technology(
+        midgut.counts, midgut.metadata, midgut.metafeatures, '10x',
+        midgut.pooledSizeFactors, spca_genes='esg')
+  ),
+  tar_target(
+    tenx.pca.clusters,
+    tenx.pca %>%
+      FindNeighbors(dims = 1:20) %>%
+      FindClusters(res = 1.8) %>%
+      Idents %>%
+      fct_recode(
+        ISC='17', EB='18'
+      ) %>%
+      fct_relevel(c("ISC", "EB"))
+  ),
+  tar_target(
+    tenx.spca.dimreduc,
+    RunSparsePCA(
+      tenx.pca, 'covar', varnum=8, npcs=60, eigen_gap=0.05, search_cap=500000
+    )[['spca']],
+    # We are not going to change the construction of the 'covar' matrix, so
+    # don't rerun this expensive step.
+    cue=tar_cue('never')
+  ),
+  tar_target(
+    tenx,
+    spca_with_centered_umap(
+      tenx.pca, tenx.spca.dimreduc, dims=1:50
+    ) %>%
+      FindNeighbors(dims = 1:34, red = "spca") %>%
+      FindClusters(res = 3.35) %>%
+      AddMetaData(
+        Idents(.) %>% fct_recode(
+          ISC='14', EB='23'
+        ) %>%
+          fct_relevel(c("ISC", "EB")),
+        "spca_clusters"
+      ) %>%
+      AddMetaData(tenx.pca.clusters, "pca_clusters")
+  ),
+  tar_target(
+    tenx.glm,
+    build_glms(tenx, midgut.pooledSizeFactors, c('pca_clusters', 'spca_clusters'))
+  ),
+  tar_target(
+    tenx.spca.param.k.input,
+    tibble(k = 1:12)
+  ),
+  tar_target(
+    tenx.spca.param.k,
+    tenx.spca.param.k.input %>%
+      rowwise %>%
+      mutate(
+        dimreduc = tenx.pca %>%
+          seurat_spca("covar", varnum=k, npcs=1, eigen_gap=0.01, search_cap=500000) %>%
+          list
+      ),
+    pattern = map(tenx.spca.param.k.input)
+  ),
+  tar_target(
+    tenx.pca.quickCluster,
+    tenx.pca %>%
+      FindNeighbors(dims = 1:findPC(tenx.pca[['pca']]@stdev)) %>%
+      FindClusters(res = 0.1) %>%
+      Idents,
+    packages = "findPC"
+  ),
+  tar_target(
+    tenx.spca.modsel.features,
+    rowAnys(
+      tenx.spca.param.k %>%
+        pull(dimreduc) %>%
+        sapply(\(dimreduc) dimreduc@feature.loadings[, "SPARSE_1"]) %>%
+        `!=`(0),
+      useNames = TRUE
+    ) %>%
+      which %>%
+      names
+  ),
+
+  # Midgut (Both inDrop and 10X) figures
   midgut_figures,
   tar_combine(midgut.figures, midgut_figures),
 
@@ -822,6 +959,42 @@ list(
     acc.glm,
     acc_glm(acc[['RNA']]@counts[acc.present.genes,], acc_colData)
   ),
+  tar_target(
+    acc.spca.param.k.input,
+    tibble(k = 1:12)
+  ),
+  tar_target(
+    acc.spca.param.k,
+    acc.spca.param.k.input %>%
+      rowwise %>%
+      mutate(
+        dimreduc = acc %>%
+          seurat_spca("covar", varnum=k, npcs=1, eigen_gap=0.01, search_cap=500000) %>%
+          list
+      ),
+    pattern = map(acc.spca.param.k.input)
+  ),
+  tar_target(
+    acc.pca.quickCluster,
+    acc %>%
+      FindNeighbors(dims = 1:findPC(acc[['pca']]@stdev)) %>%
+      FindClusters(res = 0.1) %>%
+      Idents,
+    packages = "findPC"
+  ),
+  tar_target(
+    acc.spca.modsel.features,
+    rowAnys(
+      acc.spca.param.k %>%
+        pull(dimreduc) %>%
+        sapply(\(dimreduc) dimreduc@feature.loadings[, "SPARSE_1"]) %>%
+        `!=`(0),
+      useNames = TRUE
+    ) %>%
+      which %>%
+      names
+  ),
+
   tar_target(
     pan_caf_genes,
     list(
