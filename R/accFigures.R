@@ -474,8 +474,9 @@ nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NU
     data.frame(feature = FetchData(acc, feature) %>% pull(feature)),
     acc[['umap.spca']]@cell.embeddings
   ) %>%
-    subset(
-      between(UMAP_1, xlim[1], xlim[2]) & between(UMAP_2, ylim[1], ylim[2])
+    dplyr::filter(
+      between(UMAP_1, xlim[1], xlim[2]),
+      between(UMAP_2, ylim[1], ylim[2])
     ) %>%
     ggplot(
       aes(x0 = UMAP_1, y0 = UMAP_2, color=feature)
