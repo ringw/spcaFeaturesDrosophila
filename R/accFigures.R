@@ -672,7 +672,7 @@ acc_dot_plot <- function(acc.glm, markers) {
   ) + scale_y_discrete(
     limits = rev
   ) + scale_size(
-    range = c(0.5, 4)
+    range = c(0.5, 4), labels = percent
   ) + theme_bw() + theme(
     panel.grid = element_blank(),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
