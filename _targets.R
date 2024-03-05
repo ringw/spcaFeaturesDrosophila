@@ -129,7 +129,8 @@ midgut_figures = list(
       # Novel markers (DE-CI)
       "His3.3A",
       # Others (not called yet as dEC markers?)
-      "fmt", "trol"
+      "fmt", "trol",
+      "SPARSE_1", "SPARSE_22"
     )
   ),
   tar_target(
