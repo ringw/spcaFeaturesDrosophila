@@ -721,48 +721,15 @@ list(
   tar_target(
     indrop,
     spca_with_centered_umap(
-      indrop.pca, indrop.spca.dimreduc, dims=1:50,
-      # Flip the UMAP horizontally and vertically.
-      umap_transform=-diag(2)
+      indrop.pca, indrop.spca.models[[4]], dims=1:50,
+      # Flip the UMAP vertically.
+      umap_transform=diag(c(1, -1))
     ) %>%
-      FindNeighbors(dims=1:36, red='spca') %>%
-      FindClusters(res=1.28, random.seed=1) %>%
+      FindNeighbors(dims=1:32, red='spca', nn.method = "rann") %>%
+      FindClusters(res=0.83, random.seed=0) %>%
       AddMetaData(
         Idents(.) %>% fct_recode(
-          ISC='14', EB='5',
-          `EC-like`='0',
-          # Amy-p high
-          EC.anterior1='1',
-          `copper/iron`='2',
-          # betaTry highest
-          EC.anterior2='3',
-          dEC1='4',
-          # Amy-p highest
-          EC.anterior3='6',
-          # LManVI highest
-          EC.posterior1='7',
-          EE1='8',
-          LFC1='9',
-          dEC2='10',
-          EE2='11',
-          # Gs2 highest. Note however that CG13315 is also high.
-          EC.posterior2='12',
-          others.1='13',
-          cardia='15',
-          # Vha16-1+ and CG13315 high
-          EC.meso='16',
-          # Npc2f+
-          EC.anterior4='17',
-          `EC-like2`='18',
-          LFC2='19',
-          others.2='20',
-          # Mur29B high
-          EC.posterior3='21',
-          `EC-like3`='22',
-          others.3='23',
-          `EC-like4`='24',
-          # Mur29B highest
-          EC.posterior4='25'
+          ISC='5', EB='12'
         ) %>% fct_relevel('ISC', 'EB'),
         'spca_clusters'
       ) %>%
