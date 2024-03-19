@@ -685,22 +685,115 @@ list(
     ) %>%
       rowwise %>%
       mutate(
-        all.equal = all.equal(
+        all.equal.v = all.equal(
           diag(nrow=25),
           # Use abs to correct for svd being identical up to the sign.
           abs(t(model1$v) %*% model2$v)
-        )
+        ),
+        all.equal.d = all.equal(model1$d, model2$d)
       ) %>%
       subset(select=-c(model1, model2))
   ),
   tar_target(
-    indrop.spca.dimreduc,
-    RunSparsePCA(
-      indrop.pca, 'covar', varnum=8, npcs=60, eigen_gap=0.05, search_cap=500000
-    )[['spca']],
-    # We are not going to change the construction of the 'covar' matrix, so
-    # don't rerun this expensive step.
-    cue=tar_cue('never')
+    indrop.validation.neighbors,
+    bind_rows(
+      pca=tibble(replicate = factor(1:4)) %>%
+        rowwise %>%
+        reframe(
+          replicate,
+          # FindNeighbors returns nn and snn. Keep only the list element snn in
+          # a new list-type column.
+          snn = FindNeighbors(
+            indrop.pca[["pca"]]@cell.embeddings[, 1:9] %*%
+              diag(ifelse(runif(n = 9) < 0.5, -1, 1)),
+            nn.method = "rann",
+            verb = FALSE
+          )["snn"]
+        ),
+      spca=tibble(replicate = factor(1:4), obj = indrop.spca.models) %>%
+        rowwise %>%
+        reframe(
+          replicate,
+          snn = FindNeighbors(
+            obj@cell.embeddings[, seq(obj@stdev > sqrt(2.5))],
+            nn.method = "rann",
+            verb = FALSE
+          )["snn"]
+        ),
+      .id = "model"
+    )
+  ),
+  tar_target(
+    indrop.validation.clusters,
+    cross_join(
+      indrop.validation.neighbors,
+      tibble(random.seed = 0:9)
+    ) %>%
+      rowwise %>%
+      reframe(
+        model,
+        replicate,
+        random.seed,
+        resolution_search_lower = find_isc_clustering_res(indrop.pca, snn, random.seed = random.seed, by = 0.01) %>%
+          binsearchChooseX %>%
+          `/`(100),
+        resolution_search_upper = find_isc_clustering_res(
+          indrop.pca, snn, random.seed = random.seed, res_range = 100:800, by = 0.01, intended_count=3
+        ) %>%
+          binsearchChooseX %>%
+          `/`(100),
+        # best_resolution = (resolution_search_lower + resolution_search_upper) / 2,
+        clustering = list(
+          clusterAndLabelIscEb(indrop.pca, snn, res = resolution_search_lower, random.seed = random.seed)
+        )
+      )
+  ),
+  tar_map(
+    tibble(
+      evaluation = c("adj.rand.index", "cor"),
+      FN = rlang::syms(c("guessRandIndex", "corIscEb"))
+    ),
+    names = evaluation,
+    tar_target(
+      indrop.eval.clusters,
+      indrop.validation.clusters %>%
+        group_by(model, replicate) %>%
+        reframe(
+          model,
+          replicate,
+          random.seed = unique(random.seed),
+          score = cross_join(
+            tibble(random.seed, fct1 = clustering),
+            tibble(random.seed2 = random.seed, fct2 = clustering)
+          ) %>%
+            filter(random.seed != random.seed2) %>%
+            rowwise %>%
+            mutate(score = FN(fct1, fct2)) %>%
+            group_by(random.seed) %>%
+            summarise(score = mean(score)) %>%
+            pull(score)
+        ),
+      packages = "pdfCluster"
+    ),
+    tar_target(
+      indrop.eval.clusters.replicated,
+      indrop.validation.clusters %>%
+        group_by(model) %>%
+        reframe(
+          model,
+          replicate,
+          score = cross_join(
+            tibble(replicate, random.seed, fct1 = clustering),
+            tibble(fct2 = clustering)
+          ) %>%
+            rowwise %>%
+            mutate(score = FN(fct1, fct2)) %>%
+            group_by(replicate, random.seed) %>%
+            summarise(score = mean(score)) %>%
+            pull(score)
+        ),
+      packages = "pdfCluster"
+    )
   ),
   tar_target(
     indrop.sct,
