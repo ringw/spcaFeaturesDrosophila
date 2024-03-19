@@ -1,0 +1,14 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+.Random.seed|object|dac0ffa569ec386f|||||||||||||||
+indrop.pca|stem|26c92ab9cec11aef|2f9fb8a1d7c4bbc0|8f061b967605c555|-33321065||t19789.8635853604s|92eb01d1a212dcb7|35019152|rds|local|vector|||54.537|The default method for RunUMAP has changed from calling Python UMAP via reticulate to the Rnative UWOT using the cosine metricTo use Python UMAP via reticulate, set umap.method to umaplearn and metric to correlationThis message will be shown once per session. 1 unknown level in f E E|
+indrop.spca.models|stem|8513b2cefd3bb19f|4aafec6cce19e09d|6f94659d87f71595|-991085213||t19800.6918262963s|8747ff8e64252139|4336845|rds|local|vector|||88338.473||
+midgut.counts|stem|80e49be1cbdfe635|24f43a5e9a9dbcd4|0780ec49ba7b8b77|-1684931925|GSE120537_counts.csv.gz|t19712.9159000619s|6c223865714d51e5|8494522|file|local|vector|||0.35||
+midgut.counts_url|stem|099048165dc061d1|ce9d07bdd19e7936|ef46db3751d8e999|1184907673|https://ftp.ncbi.nlm.nih.gov/geo/series/GSE120nnn/GSE120537/suppl/GSE120537%5Fcounts.csv.gz|t19712.915894851s||0|url|local|vector|||0||
+midgut.flybase|stem|9bebde10413eebad|bca771a2324b9869|f89cc1ac28c10d1e|-197900453|fbgn_annotation_ID_2019_02.tsv.gz|t19712.5208857094s|85cda0d3325160c6|819669|file|local|vector|||0.257||
+midgut.flybase_url|stem|f93eff8abce9ba6d|cf20e68b2b0f45a2|ef46db3751d8e999|-1764331738|https://ftp.flybase.org/releases/FB2019_02/precomputed_files/genes/fbgn_annotation_ID_fb_2019_02.tsv.gz|t19712.5208828109s||0|url|local|vector|||4.344||
+midgut.gtf|stem|5a0fd28d369b673b|6140a27dc746466a|12c4aeca45f02aa9|205264777|dmel-all-r6.27.gtf.gz|t19699.9412156017s|9cfa8d16a1183fda|3907482|file|local|vector|||0.339||
+midgut.gtf_url|stem|3de80905b7570df3|b1bd54f7f8b8f0a7|ef46db3751d8e999|552521582|https://ftp.flybase.org/releases/FB2019_02/dmel_r6.27/gtf/dmel-all-r6.27.gtf.gz|t19699.9412117589s||0|url|local|vector|||1.232||
+midgut.metadata|stem|c3105e8532e23305|b9a0800edbbfa66b|30c7c3a018a472c3|-205819992|GSE120537_metadata.csv.gz|t19712.9158958953s|98245a8ef34815a2|764669|file|local|vector|||0.094||
+midgut.metadata_url|stem|fb8a6b79ee2aaa98|8026f11ec00430e2|ef46db3751d8e999|865410622|https://ftp.ncbi.nlm.nih.gov/geo/series/GSE120nnn/GSE120537/suppl/GSE120537%5Fmetadata.csv.gz|t19712.9158939985s||0|url|local|vector|||4.693||
+midgut.metafeatures|stem|a940a8244c242ffd|fe64029d4265ee26|8442920af642c900|-85873574||t19712.5631730937s|4438b8ad871a417d|231375|rds|local|vector|||30.43||
+midgut.pooledSizeFactors|stem|407f8b788046dee1|002c589873a4e549|5fd1e226792cc805|2083011690||t19702.5901733462s|416afeb691f159aa|144599|rds|local|vector|||67.208|collapsing to unique x values. collapsing to unique x values|
