@@ -564,11 +564,9 @@ list(
   ),
   tar_target(
     indrop.pca,
-    # esg may be included as an spca gene as it helps separate ISC from dEC, and
-    # also separates EB (esg hi, reason unknown) from ISC (esg mid).
     midgut_seurat_for_technology(
         midgut.counts, midgut.metadata, midgut.metafeatures, 'inDrop',
-        midgut.pooledSizeFactors, spca_genes='esg') %>%
+        midgut.pooledSizeFactors) %>%
       # Now call the pca clusters.
       FindNeighbors(dims=1:9) %>%
       FindClusters(res=1.04, random.seed=1) %>%
@@ -607,7 +605,7 @@ list(
   ),
   tar_target(
     indrop.spca.param.k.input,
-    tibble(k = 1:25)
+    tibble(k = 1:20)
   ),
   tar_target(
     indrop.spca.param.k,
@@ -615,7 +613,7 @@ list(
       rowwise %>%
       mutate(
         dimreduc = indrop.pca %>%
-          seurat_spca("covar", varnum=k, npcs=1, eigen_gap=0.01, search_cap=500000) %>%
+          seurat_spca("covar", varnum=k, npcs=2, eigen_gap=0.01, search_cap=500000) %>%
           list
       ),
     pattern = map(indrop.spca.param.k.input)
@@ -654,6 +652,46 @@ list(
         .keep = "unused"
       ),
     packages = "mvtnorm"
+  ),
+  tar_target(
+    indrop.spca.models,
+    replicate_spca_model_parallel(
+      indrop.pca, memory_cgroups, seed=0:3,
+      varnum=8, npcs=50, eigen_gap=0.001, search_cap=500000,
+      do.correct.elbow = TRUE
+    ),
+    packages = "future"
+  ),
+  tar_target(
+    indrop.pca.validation.model.pattern,
+    as.list(1:4)
+  ),
+  tar_target(
+    indrop.pca.validation.models,
+    irlba(
+      indrop.pca[["RNA"]]@scale.data, nv=25,
+      # Ensure that we get a random start to the irlba algorithm.
+      v = rnorm(n = ncol(indrop.pca))
+    ),
+    pattern = map(indrop.pca.validation.model.pattern),
+    iteration = "list",
+    packages = "irlba"
+  ),
+  tar_target(
+    indrop.pca.replicates.identical,
+    cross_join(
+      tibble(pca1 = 1:4, model1 = indrop.pca.validation.models),
+      tibble(pca2 = 1:4, model2 = indrop.pca.validation.models)
+    ) %>%
+      rowwise %>%
+      mutate(
+        all.equal = all.equal(
+          diag(nrow=25),
+          # Use abs to correct for svd being identical up to the sign.
+          abs(t(model1$v) %*% model2$v)
+        )
+      ) %>%
+      subset(select=-c(model1, model2))
   ),
   tar_target(
     indrop.spca.dimreduc,

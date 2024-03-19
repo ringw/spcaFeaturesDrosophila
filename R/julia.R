@@ -23,13 +23,14 @@ julia_pkg_OptimalSPCADepot <- function() {
   )
 }
 
-julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL) {
+julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL, cgroup=NULL) {
   mat_output = tempfile('cov', fileext = '.csv.gz')
   csv_gz_conn = file(mat_output, 'wb')
   csv_conn = gzcon(csv_gz_conn)
   write.csv(mat, csv_conn, row.names = F)
   close(csv_conn)
 
+  cgexec_command <- if (!is.null(cgroup)) paste0("cgexec -g ", cgroup, " ") else ""
   with_options(
     list(scipen=100),
     with_envvar(
@@ -40,6 +41,7 @@ julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap
       {
         p = pipe(
           paste0(
+            cgexec_command,
             obtainEnvironmentPath(julia_env),
             '/bin/julia --project=. --threads=auto ',
             # getwd(),
@@ -71,9 +73,9 @@ julia_spca_pipe <- function(mat, output_file, K, D, search_cap=500000, eigen_gap
   )
 }
 
-run_optimal_spca <- function(mat, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL) {
+run_optimal_spca <- function(mat, K, D, search_cap=500000, eigen_gap=0.001, uint64_seed=NULL, cgroup=NULL) {
   output_file = tempfile('SPCA', fileext = '.csv')
-  p = julia_spca_pipe(mat, output_file, K, D, search_cap, eigen_gap, uint64_seed)
+  p = julia_spca_pipe(mat, output_file, K, D, search_cap, eigen_gap, uint64_seed, cgroup)
   num_progress_dots = 20
 
   # Assume that the total number of ticks is D * num_progress_dots. If one PC

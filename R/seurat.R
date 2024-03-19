@@ -81,7 +81,7 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, metafeature
   seurat
 }
 
-seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap, assay='RNA', do.correct.elbow = F) {
+runif_uint64 <- function() {
   # Julia will accept an UInt64 random seed.
   julia_seed = do.call(
     paste0,
@@ -94,12 +94,31 @@ seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap
       )
     )
   )
+}
+
+seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap, assay='RNA', do.correct.elbow = F, cgroup = NULL) {
   covar = seurat@misc[[matrix_name]]
-  feature_loadings = run_optimal_spca(covar, K=varnum, D=npcs, search_cap=search_cap, eigen_gap=eigen_gap, uint64_seed=julia_seed)
+  seurat_spca_compute_feature_loadings(covar, varnum, npcs, search_cap, eigen_gap, cgroup) %>%
+    seurat_spca_from_feature_loadings(seurat, assay, do.correct.elbow)
+}
+
+seurat_spca_compute_feature_loadings <- function(
+  covar, varnum, npcs, search_cap, eigen_gap, cgroup
+) {
+  julia_seed = runif_uint64()
+  feature_loadings = run_optimal_spca(
+    covar, K=varnum, D=npcs, search_cap=search_cap, eigen_gap=eigen_gap,
+    uint64_seed=julia_seed, cgroup=cgroup
+  )
   # Fix the signs of feature loadings using the median sign.
   feature_loadings_heatmap = feature_loadings %>% apply(1, \(v) v %>% subset(. != 0)) %>% t
   feature_loadings = feature_loadings * rowMedians(sign(feature_loadings_heatmap))
-  feature_loadings = t(feature_loadings)
+  t(feature_loadings)
+}
+
+seurat_spca_from_feature_loadings <- function(
+  feature_loadings, seurat, assay, do.correct.elbow
+) {
   colnames(feature_loadings) = paste0('SPARSE_', seq(ncol(feature_loadings)))
   dataMeans = rowMeans(
     seurat[[assay]]@data[rownames(feature_loadings), ]
@@ -139,11 +158,46 @@ seurat_spca <- function(seurat, matrix_name, varnum, npcs, search_cap, eigen_gap
   )
   if (do.correct.elbow) {
     obj.perm = order(obj@stdev, decreasing=T)
-    obj.names = paste0(
-      'SPARSE_',
-      seq(ncol(feature_loadings)),
-      ifelse(obj.perm == seq_along(obj.perm), '\'', '')
-    )
+    obj.names = colnames(obj@cell.embeddings)
+    # un-permuted feature loadings and their permutation
+    obj@misc$correction.perm = obj.perm
+    obj@misc$search.feature.loadings = obj@feature.loadings
+    obj@cell.embeddings = obj@cell.embeddings[, obj.perm]
+    colnames(obj@cell.embeddings) = obj.names
+    obj@feature.loadings = obj@feature.loadings[, obj.perm]
+    colnames(obj@feature.loadings) = obj.names
+    obj@stdev = obj@stdev[obj.perm]
+    names(obj@stdev) = obj.names
+  }
+  obj
+}
+
+seurat_spca_from_feature_loadings_nocenter <- function(
+  feature_loadings, seurat, assay, do.correct.elbow
+) {
+  colnames(feature_loadings) = paste0('SPARSE_', seq(ncol(feature_loadings)))
+  dataMeans = rowMeans(
+    seurat[[assay]]@data[rownames(feature_loadings), ]
+  )
+  dataSds = rowSds(
+    seurat[[assay]]@data[rownames(feature_loadings), ]
+  )
+  # data should be nonnegative, so we will update sd to a pseudo-sd of "1" if
+  # the mean is 0.
+  dataSds = dataSds %>% replace(dataMeans == 0, 1)
+  cell_embeddings = t(seurat[['RNA']]@scale.data[rownames(feature_loadings), ]) %*% feature_loadings
+  stdev = colSds(cell_embeddings)
+  obj = CreateDimReducObject(
+    cell_embeddings,
+    feature_loadings,
+    stdev=stdev,
+    assay=assay,
+    key='SPARSE_'
+  )
+  if (do.correct.elbow) {
+    obj.perm = order(obj@stdev, decreasing=T)
+    obj.names = colnames(obj@cell.embeddings)
+    # un-permuted feature loadings
     obj@misc$search.feature.loadings = obj@feature.loadings
     obj@cell.embeddings = obj@cell.embeddings[, obj.perm]
     colnames(obj@cell.embeddings) = obj.names

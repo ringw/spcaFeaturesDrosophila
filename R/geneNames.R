@@ -2,7 +2,9 @@ gene_names <- list(
   Dl='Delta',
   `E(spl)malpha-BFM`="E(spl)m\u03B1",
   `E(spl)mbeta-HLH`="E(spl)m\u03B2",
-  betaTry="\u03B2Try"
+  `E(spl)m3-HLH`="E(spl)m3",
+  betaTry="\u03B2Try",
+  lrRNA="mt:lrRNA"
 )
 
 feature_names <- gene_names %>%
