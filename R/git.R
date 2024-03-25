@@ -4,7 +4,7 @@ git_clone_OptimalSPCA <- function() {
   with_dir(
     'Optimal-SPCA',
     stopifnot(
-      # TODO: Replace this branch name with a commit hash
-      system2('git', c('checkout', 'deterministic')) == 0))
+      # Branch name "deterministic" - includes SPCA.jl.
+      system2('git', c('checkout', 'eb3f784cfdce82a6e03680584d7d0e331f2155af')) == 0))
   'Optimal-SPCA'
 }
