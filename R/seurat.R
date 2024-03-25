@@ -162,9 +162,9 @@ seurat_spca_from_feature_loadings <- function(
     # un-permuted feature loadings and their permutation
     obj@misc$correction.perm = obj.perm
     obj@misc$search.feature.loadings = obj@feature.loadings
-    obj@cell.embeddings = obj@cell.embeddings[, obj.perm]
+    obj@cell.embeddings = obj@cell.embeddings[, obj.perm, drop=FALSE]
     colnames(obj@cell.embeddings) = obj.names
-    obj@feature.loadings = obj@feature.loadings[, obj.perm]
+    obj@feature.loadings = obj@feature.loadings[, obj.perm, drop=FALSE]
     colnames(obj@feature.loadings) = obj.names
     obj@stdev = obj@stdev[obj.perm]
     names(obj@stdev) = obj.names
