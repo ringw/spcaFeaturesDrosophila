@@ -5,6 +5,6 @@ git_clone_OptimalSPCA <- function() {
     'Optimal-SPCA',
     stopifnot(
       # Branch name "deterministic" - includes SPCA.jl.
-      system2('git', c('checkout', 'eb3f784cfdce82a6e03680584d7d0e331f2155af')) == 0))
+      system2('git', c('checkout', 'e0a13c3ee559108b0d867ac5523e5c57471f88b3')) == 0))
   'Optimal-SPCA'
 }
