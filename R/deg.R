@@ -116,6 +116,7 @@ build_de_data <- function(glms, present_genes) {
       )
       message('Perform F-test of original model')
       a$mle.test = test_de(model, 'clusterEB')
+      a$total_num_expressed = rowSums(assay(glm.binary$data, "counts") != 0)
       a
     },
     names(glms),
