@@ -871,13 +871,13 @@ list(
       # Flip the UMAP vertically.
       umap_transform=diag(c(1, -1))
     ) %>%
-      FindNeighbors(dims=1:32, red='spca', nn.method = "rann") %>%
-      FindClusters(res=0.83, random.seed=0) %>%
+      FindNeighbors(dims=1:34, red="spca", nn.method = "rann") %>%
+      FindClusters(res=1.0, random.seed=1) %>%
       AddMetaData(
         Idents(.) %>% fct_recode(
-          ISC='5', EB='12'
-        ) %>% fct_relevel('ISC', 'EB'),
-        'spca_clusters'
+          ISC="9", EB="11"
+        ) %>% fct_relevel("ISC", "EB"),
+        "spca_clusters"
       ) %>%
       midgut_classify_cell_types('spca_clusters') %>%
       AddMetaData(
