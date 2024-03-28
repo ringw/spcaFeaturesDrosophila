@@ -24,7 +24,6 @@ tar_option_set(
     "ggplot2",
     "ggpubr",
     "ggrastr",
-    "glmGamPoi",
     "grDevices",
     "infercnv",
     "Matrix",
@@ -240,6 +239,38 @@ midgut_figures = list(
       width=3.25, height=2
     ),
     pattern = map(indrop.cdf.spcs),
+    format = "file"
+  ),
+  tar_target(
+    fig.indrop.deg,
+    save_figure(
+      "figure/Midgut/Indrop-DEG.pdf",
+      plot_arrange_deg_segments(indrop.deg),
+      8, 6,
+      device = CairoPDF
+    ),
+    format = "file",
+    packages = "Cairo"
+  ),
+  tar_target(
+    fig.indrop.deg.legend,
+    save_figure(
+      "figure/Midgut/DEG-Legend.pdf",
+      cowplot::get_legend(
+        plot_midgut_de_panel(
+          tibble(
+            rowname="a", displayName="a", log2FoldChange=2, lfcSE=1, q_val=1
+          )
+        )
+        + guides(color = guide_legend(nrow = 2))
+        + theme(
+          legend.position = "bottom",
+          legend.text = element_text(size = 7),
+          legend.key.size = unit(0.75, "lines")
+        )
+      ),
+      5, 1
+    ),
     format = "file"
   )
 )
@@ -857,7 +888,8 @@ list(
   ),
   tar_target(
     indrop.glm,
-    build_glms(indrop, midgut.pooledSizeFactors, c('pca_clusters', 'spca_clusters'))
+    build_glms(indrop, midgut.pooledSizeFactors, c('pca_clusters', 'spca_clusters')),
+    packages = "glmGamPoi"
   ),
   tar_target(
     indrop.present.genes,
@@ -866,7 +898,7 @@ list(
   tar_target(
     indrop.deg,
     build_de_data(indrop.glm, indrop.present.genes),
-    packages = "apeglm"
+    packages = c("apeglm", "glmGamPoi")
   ),
   tar_map(
     tibble(name=c("pca_subclassif", "spca_subclassif")),
@@ -880,7 +912,8 @@ list(
     ),
     tar_target(
       indrop.glm.abundances,
-      build_glm_cpm(indrop, name, indrop.glm.dispersion.param)
+      build_glm_cpm(indrop, name, indrop.glm.dispersion.param),
+      packages = "glmGamPoi"
     ),
     tar_target(
       indrop.cpm,
@@ -908,7 +941,8 @@ list(
     # also separates EB (esg hi, reason unknown) from ISC (esg mid).
     midgut_seurat_for_technology(
         midgut.counts, midgut.metadata, midgut.metafeatures, '10x',
-        midgut.pooledSizeFactors, spca_genes='esg')
+        midgut.pooledSizeFactors
+    )
   ),
   tar_target(
     tenx.pca.clusters,
@@ -948,7 +982,17 @@ list(
   ),
   tar_target(
     tenx.glm,
-    build_glms(tenx, midgut.pooledSizeFactors, c('pca_clusters', 'spca_clusters'))
+    build_glms(tenx, midgut.pooledSizeFactors, c('pca_clusters', 'spca_clusters')),
+    packages = "glmGamPoi"
+  ),
+  tar_target(
+    tenx.present.genes,
+    build_present_gene_list(tenx, c('pca_clusters', 'spca_clusters'))
+  ),
+  tar_target(
+    tenx.deg,
+    build_de_data(tenx.glm, tenx.present.genes),
+    packages = "apeglm"
   ),
   tar_target(
     tenx.spca.param.k.input,
@@ -1077,7 +1121,8 @@ list(
   ),
   tar_target(
     acc.glm,
-    acc_glm(acc[['RNA']]@counts[acc.present.genes,], acc_colData)
+    acc_glm(acc[['RNA']]@counts[acc.present.genes,], acc_colData),
+    packages = "glmGamPoi"
   ),
   tar_target(
     acc.spca.param.k.input,
