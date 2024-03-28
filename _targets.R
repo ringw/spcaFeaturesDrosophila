@@ -700,7 +700,7 @@ list(
       with_seed(
         0,
         indrop.pca[['RNA']]@scale.data[
-          VariableFeatures(indrop.pca) %>% head(ngenes)
+          VariableFeatures(indrop.pca) %>% head(ngenes),
         ] %>%
           t %>%
           var %>%
