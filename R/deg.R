@@ -67,14 +67,14 @@ predict_glm_cpm <- function(glm.cpm) {
   cpm
 }
 
-build_present_gene_list <- function(seurat, columns) {
+build_present_gene_list <- function(seurat, columns, select=everything()) {
   grid = expand.grid(column=columns, level=c('ISC','EB'))
   grid$level = as.character(grid$level)
   # Simplify this. For our two groups, if each group is sparse with at most one
   # count in the regression model, then the log-likelihood seems to be giving an
   # error. We can keep genes with no counts in one class, but at a minimum we
   # should quantify the gene in 2 cells.
-  setNames(
+  present_genes_logical <- setNames(
     rowMins(sapply(
       columns,
       \(column_name) as.data.frame(
@@ -83,6 +83,15 @@ build_present_gene_list <- function(seurat, columns) {
       %>% sapply(\(counts) colSums(counts != 0)) %>% rowMaxs
     )) >= 2,
     rownames(seurat))
+  present_genes_logical <- present_genes_logical & (
+    seq(nrow(seurat))
+    %in%
+    eval_select(
+      rlang::enquo(select),
+      setNames(seq(nrow(seurat)), rownames(seurat))
+    )
+  )
+  present_genes_logical
 }
 
 build_de_data <- function(glms, present_genes) {

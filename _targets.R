@@ -39,6 +39,7 @@ tar_option_set(
     "Seurat",
     "stringr",
     "tibble",
+    "tidyselect",
     "viridis",
     "withr"
   )
@@ -893,12 +894,21 @@ list(
   ),
   tar_target(
     indrop.present.genes,
-    build_present_gene_list(indrop, c('pca_clusters', 'spca_clusters'))
+    build_present_gene_list(
+      indrop,
+      c('pca_clusters', 'spca_clusters'),
+      # rRNA does not usually show up when using many RNA-seq technologies and
+      # we are not interested in quantifying it, so remove it from the GLM
+      # analysis. Mitochondrial rRNA in Drosophila does show up using different
+      # RNA-seq technologies, so to avoid removing genes that are actually
+      # abundant, we will include those rRNAs in the analysis.
+      select=matches("^mt:") | !matches("rRNA")
+    )
   ),
   tar_target(
     indrop.deg,
     build_de_data(indrop.glm, indrop.present.genes),
-    packages = c("apeglm", "glmGamPoi")
+    packages = c("apeglm", "glmGamPoi", "SummarizedExperiment")
   ),
   tar_map(
     tibble(name=c("pca_subclassif", "spca_subclassif")),
@@ -987,12 +997,15 @@ list(
   ),
   tar_target(
     tenx.present.genes,
-    build_present_gene_list(tenx, c('pca_clusters', 'spca_clusters'))
+    build_present_gene_list(
+      tenx, c('pca_clusters', 'spca_clusters'),
+      select=matches("^mt:") | !matches("rRNA")
+    )
   ),
   tar_target(
     tenx.deg,
     build_de_data(tenx.glm, tenx.present.genes),
-    packages = "apeglm"
+    packages = c("apeglm", "glmGamPoi", "SummarizedExperiment")
   ),
   tar_target(
     tenx.spca.param.k.input,
