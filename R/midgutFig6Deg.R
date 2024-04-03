@@ -18,9 +18,10 @@ display_deg_data <- function(deg_data, min_num_expressed = 25) {
 
 plot_arrange_deg_segments <- function(deg_models) {
   results <- deg_models %>% sapply(display_deg_data, simplify=FALSE)
-  panels <- cross_join(
+  panels <- full_join(
     enframe(results, "model", "values"),
-    tibble(sgn = c(-1, 1))
+    tibble(sgn = c(-1, 1)),
+    by=character()
   ) %>%
     rowwise %>%
     mutate(

@@ -55,8 +55,9 @@ plot_spca_cdf <- function(seurat, column_to_use, levels_to_use, spca_index) {
     sapply(ecdf, simplify=FALSE) %>%
     enframe(name="cluster")
   plot_data <- spca_samples %>%
-    cross_join(
-      data.frame(embedding = seq(min(data[, 2]) + 1e-6, max(data[, 2]), length.out=100))
+    full_join(
+      data.frame(embedding = seq(min(data[, 2]) + 1e-6, max(data[, 2]), length.out=100)),
+      by=character()
     ) %>%
     rowwise %>%
     mutate(

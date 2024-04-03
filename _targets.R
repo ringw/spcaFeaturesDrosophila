@@ -733,9 +733,10 @@ list(
   ),
   tar_target(
     indrop.pca.replicates.identical,
-    cross_join(
+    full_join(
       tibble(pca1 = 1:4, model1 = indrop.pca.validation.models),
-      tibble(pca2 = 1:4, model2 = indrop.pca.validation.models)
+      tibble(pca2 = 1:4, model2 = indrop.pca.validation.models),
+      by=character()
     ) %>%
       rowwise %>%
       mutate(
@@ -779,9 +780,10 @@ list(
   ),
   tar_target(
     indrop.validation.clusters,
-    cross_join(
+    full_join(
       indrop.validation.neighbors,
-      tibble(random.seed = 0:9)
+      tibble(random.seed = 0:9),
+      by=character()
     ) %>%
       rowwise %>%
       reframe(
@@ -836,9 +838,10 @@ list(
         reframe(
           model,
           replicate,
-          score = cross_join(
+          score = full_join(
             tibble(replicate, random.seed, fct1 = clustering),
-            tibble(fct2 = clustering)
+            tibble(fct2 = clustering),
+            by=character()
           ) %>%
             rowwise %>%
             mutate(score = FN(fct1, fct2)) %>%
