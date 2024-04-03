@@ -139,7 +139,7 @@ plot_midgut_de_panel <- function(de_data, sgn=1, extent=3, overlap=0.25, limit=1
         y=number-0.5,
         label=label
       ),
-      # family='Noto Serif',
+      family='Noto Serif',
       size=2.5
     )
     + geom_point(aes(x=log2FoldChange, y=number, color=annotation), size=0.5)

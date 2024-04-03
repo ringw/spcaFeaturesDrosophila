@@ -5,10 +5,15 @@
 
 # Load packages required to define the pipeline:
 library(dplyr)
+library(grDevices)
 library(stringr)
 library(targets)
 library(tarchetypes)
 library(tibble)
+
+# Set font for figures.
+pdfFonts(sans = pdfFonts()$Helvetica)
+postscriptFonts(sans = postscriptFonts()$Helvetica)
 
 # Set target options:
 tar_option_set(
