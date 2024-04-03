@@ -40,4 +40,5 @@ sudo apt install --no-install-recommends r-base-core=4.2.2.20221110-2 \
 
 R -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/targets/targets_1.4.1.tar.gz", repos=NULL, type="source")'
 R -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/tarchetypes/tarchetypes_0.7.11.tar.gz", repos=NULL, type="source")'
-R -e 'BiocManager::install("infercnv")'
+# TODO: Add other dependencies here such as HiddenMarkov
+R -e 'BiocManager::install(c("apeglm", "infercnv", "RcppNumerical"), dep=F, upd=F)'
