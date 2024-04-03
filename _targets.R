@@ -256,7 +256,7 @@ midgut_figures = list(
       device = CairoPDF
     ),
     format = "file",
-    packages = "Cairo"
+    packages = tar_option_get("packages") %>% c("Cairo")
   ),
   tar_target(
     fig.indrop.deg.legend,
