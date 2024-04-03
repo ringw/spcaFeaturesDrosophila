@@ -258,7 +258,7 @@ midgut_classify_cell_types <- function(seurat, colname) {
     'EC-like',
     'mEC',
     'pEC',
-    'E E',
+    'EE',
     'copper/iron',
     'LFC',
     'cardia'
