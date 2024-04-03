@@ -619,9 +619,8 @@ list(
           cardia1='18', cardia2='23',
           dEC1='4', dEC2='11',
           `copper/iron`='10',
-          EC.meso='12',
-          LFC1='13', LFC2='19',
-          others.1='14', others.2='18', others.3='22',
+          EC.meso='12', LFC1='13', LFC2='19',
+          others.1='14', others.2='22',
           EC.posterior1='15', EC.posterior2='16',
           EC.posterior3='17', EC.posterior4='21',
           EC.posterior5='24'
@@ -697,7 +696,10 @@ list(
       varnum=8, npcs=50, eigen_gap=0.001, search_cap=500000,
       do.correct.elbow = TRUE
     ),
-    packages = "future"
+    packages = "future",
+    # 'covar' matrix has not changed in the 'indrop.pca' object, so do not rerun
+    # spca models target which has an ETA of 12-24 hours.
+    cue = tar_cue("never")
   ),
   tar_map(
     data.frame(ngenes = c(500, 1500, 2000)),
@@ -876,15 +878,37 @@ list(
   tar_target(
     indrop,
     spca_with_centered_umap(
-      indrop.pca, indrop.spca.models[[4]], dims=1:50,
-      # Flip the UMAP vertically.
-      umap_transform=diag(c(1, -1))
+      indrop.pca, indrop.spca.models[[4]], dims=1:50
     ) %>%
       FindNeighbors(dims=1:34, red="spca", nn.method = "rann") %>%
       FindClusters(res=1.0, random.seed=1) %>%
       AddMetaData(
         Idents(.) %>% fct_recode(
-          ISC="9", EB="11"
+          ISC="9", EB="11",
+          # A massive cluster of SPC1-high cells.
+          `EC-like`="0",
+          EC.anterior1="1",
+          EC.anterior2="2",
+          dEC1="3",
+          LFC1="4",
+          `copper/iron`="5",
+          EE.Ast1="6",
+          EC.anterior3="7",
+          EC.posterior1="8",
+          dEC2="10",
+          EC.meso="12",
+          EE.Ast2="13",
+          others.1="14",
+          `EC-like2`="15",
+          cardia="16",
+          dEC3="17",
+          EC.anterior4="18",
+          others.2="19",
+          LFC2="20",
+          EC.posterior2="21",
+          `EC-like3`="22",
+          others.3="23",
+          `EC-like3`="24"
         ) %>% fct_relevel("ISC", "EB"),
         "spca_clusters"
       ) %>%
@@ -976,10 +1000,11 @@ list(
   tar_target(
     tenx.spca.dimreduc,
     RunSparsePCA(
-      tenx.pca, 'covar', varnum=8, npcs=60, eigen_gap=0.05, search_cap=500000
+      tenx.pca, 'covar', varnum=12, npcs=50, eigen_gap=0.001, search_cap=500000,
+      cgroup=memory_cgroups[2], do.correct.elbow=TRUE
     )[['spca']],
-    # We are not going to change the construction of the 'covar' matrix, so
-    # don't rerun this expensive step.
+    # 'covar' matrix has not changed in the 'tenx.pca' object, so do not rerun
+    # dimreduc target which has an ETA of 12-24 hours.
     cue=tar_cue('never')
   ),
   tar_target(
@@ -987,11 +1012,11 @@ list(
     spca_with_centered_umap(
       tenx.pca, tenx.spca.dimreduc, dims=1:50
     ) %>%
-      FindNeighbors(dims = 1:34, red = "spca") %>%
-      FindClusters(res = 3.35) %>%
+      FindNeighbors(dims = 1:22, red = "spca", nn.method = "rann") %>%
+      FindClusters(res = 2, random.seed = 1) %>%
       AddMetaData(
         Idents(.) %>% fct_recode(
-          ISC='14', EB='23'
+          ISC='19', EB='20'
         ) %>%
           fct_relevel(c("ISC", "EB")),
         "spca_clusters"
@@ -1074,10 +1099,11 @@ list(
   tar_target(
     acc.spca.dimreduc,
     RunSparsePCA(
-      acc.rna, 'covar', varnum=10, npcs=50, eigen_gap=0.05, search_cap=100000
+      acc.rna, 'covar', varnum=10, npcs=50, eigen_gap=0.001, search_cap=100000,
+      cgroup=memory_cgroups[3], do.correct.elbow=TRUE
     )[['spca']],
-    # We are not going to change the construction of the 'covar' matrix, so
-    # don't rerun this expensive step.
+    # 'covar' matrix has not changed in the 'acc.rna' object, so do not rerun
+    # dimreduc target which has an ETA of 12-24 hours.
     cue=tar_cue('never')
   ),
   tar_target(

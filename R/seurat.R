@@ -71,6 +71,10 @@ midgut_seurat_for_technology <- function(counts_file, metadata_file, metafeature
     %>% RunPCA(verb=F)
     %>% RunUMAP(dims=1:30)
   )
+  # Fix orientation of the UMAP (stem cells in top-left quadrant).
+  seurat[["umap"]]@cell.embeddings <- seurat[["umap"]]@cell.embeddings %*% (
+    matrix(diag(c(-1, -1)), nrow=2, dimnames=list(NULL, c("UMAP_1", "UMAP_2")))
+  )
   seurat@misc$covar = var(
     t(
       seurat[['RNA']]@scale.data[spca.features,]
