@@ -87,7 +87,13 @@ de.labels = factor(
     'LanA'='Cells during development (various)',
     'ImpL2'='Cells during development (various)',
     'Jon65Aiii'='Tissue (enzyme)',
-    'Sox21a'='Cells during development (various)'
+    'Sox21a'='Cells during development (various)',
+
+    # Myoblast fusion and somatic muscle development
+    'Ldh'='Cells during development (various)',
+    'luna'='Cells during development (various)',
+
+    'Jon25Biii'='Tissue (enzyme)'
   ),
   c(
     'Stem cell',
