@@ -1,10 +1,13 @@
 gene_names <- list(
+  # Symbol change to Delta from latest Flybase release
   Dl='Delta',
   `E(spl)malpha-BFM`="E(spl)m\u03B1",
   `E(spl)mbeta-HLH`="E(spl)m\u03B2",
   `E(spl)m3-HLH`="E(spl)m3",
   betaTry="\u03B2Try",
-  lrRNA="mt:lrRNA"
+  lrRNA="mt:lrRNA",
+  # From latest Flybase release
+  CG2556="mdu"
 )
 
 feature_names <- gene_names %>%
