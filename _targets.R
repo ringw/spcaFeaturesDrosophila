@@ -989,8 +989,8 @@ list(
   tar_target(
     tenx.pca.clusters,
     tenx.pca %>%
-      FindNeighbors(dims = 1:20) %>%
-      FindClusters(res = 1.8) %>%
+      FindNeighbors(dims = 1:30) %>%
+      FindClusters(res = 1.5) %>%
       Idents %>%
       fct_recode(
         ISC='17', EB='18'
