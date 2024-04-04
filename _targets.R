@@ -1021,7 +1021,9 @@ list(
           fct_relevel(c("ISC", "EB")),
         "spca_clusters"
       ) %>%
-      AddMetaData(tenx.pca.clusters, "pca_clusters")
+      AddMetaData(tenx.pca.clusters, "pca_clusters") %>%
+      midgut_classify_cell_types("pca_clusters") %>%
+      midgut_classify_cell_types("spca_clusters")
   ),
   tar_target(
     tenx.glm,
