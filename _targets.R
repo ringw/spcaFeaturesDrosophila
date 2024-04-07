@@ -993,7 +993,41 @@ list(
       FindClusters(res = 1.5) %>%
       Idents %>%
       fct_recode(
-        ISC='17', EB='18'
+        ISC='17', EB='18',
+        pEC1='0',
+        aEC1='1',
+        dEC='2',
+        aEC2='3',
+        # We created a feature that separates EC-like from EC on the inDrop
+        # batch: UMI_per_Feature <- nCount_RNA / nFeature_RNA
+        # The inDrop EC-like UMI_per_feature was much closer to that of the
+        # dEC feature, although the cells are much closer in terms of cosine
+        # similarity to aEC cells. Using the new feature, we called cluster '4'
+        # as corresponding to the largest inDrop 'EC-like' cluster.
+        `EC-like1`='4',
+        EE1='5',
+        pEC2='6',
+        `copper/iron`='7',
+        aEC3='8',
+        `copper/iron2`='9',
+        LFC='10',
+        mEC='11',
+        EE2='12',
+        pEC3='13',
+        aEC4='14',
+        pEC4='15',
+        aEC5='16',
+        # Again, UMI_per_Feature suggests that cluster '19' matches 'EC-like'
+        # and not 'aEC'.
+        `EC-like2`='19',
+        `copper/iron3`='20',
+        pEC5='21',
+        EE3='22',
+
+        # EbpIII+
+        others='23',
+        # Pgant4+
+        cardia='24'
       ) %>%
       fct_relevel(c("ISC", "EB"))
   ),
@@ -1016,7 +1050,32 @@ list(
       FindClusters(res = 2, random.seed = 1) %>%
       AddMetaData(
         Idents(.) %>% fct_recode(
-          ISC='19', EB='20'
+          ISC='19', EB='20',
+
+          pEC1='0',
+          aEC1='1',
+          pEC2='2',
+          EE1='3',
+          `copper/iron1`='4',
+          aEC2='5',
+          `EC-like1`='6',
+          pEC3='7',
+          LFC='8',
+          `EC-like2`='9',
+          aEC3='10',
+          EE2='11',
+          `copper/iron2`='12',
+          mEC='13',
+          pEC4='14',
+          dEC='15',
+          pEC5='16',
+          aEC4='17',
+          `EC-like3`='18',
+          `copper/iron3`='21',
+          cardia='22',
+          aEC5='23',
+          others='24',
+          aEC6='25'
         ) %>%
           fct_relevel(c("ISC", "EB")),
         "spca_clusters"
