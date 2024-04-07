@@ -262,7 +262,7 @@ acc_make_feature_profiles <- function(acc, features) {
           simplify = F
         ) %>%
           bind_rows(.id = "ident"),
-        by = join_by(ident, x)
+        by = c("ident", "x")
       ) %>%
       pull(y)
   )
@@ -329,7 +329,7 @@ acc_make_feature_profiles_density <- function(acc, features) {
           simplify = F
         ) %>%
           bind_rows(.id = "ident"),
-        by = join_by(ident, x)
+        by = c("ident", "x")
       ) %>%
       pull(y)
   )

@@ -146,7 +146,7 @@ midgut_dot_plot <- function(cpm_data, pct_data, bg_color=waiver()) {
   plot_data <- melt(scale_cpm_data, value.name="scaleCPM") %>%
     inner_join(
       melt(pct_data, value.name="pct"),
-      join_by(gene, cluster)
+      c("gene", "cluster")
     )
   plot_data$gene <- plot_data$gene %>% factor(rownames(cpm_data)) %>%
     display_gene_names
