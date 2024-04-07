@@ -136,28 +136,6 @@ process_acc_spca <- function(acc, spca) {
     acc %>% FindNeighbors(dims = 1:10) %>% FindClusters(res = 0.1)
   )$seurat_clusters
 
-  # Y = beta M^T
-  # beta -> beta * betamat.transform
-  # M -> M %*% solve(t(betamat.transform))
-  # We want to subtract the average of the other cell types from cluster '2'.
-  # A gene is a row of "beta", and we want column operations.
-  mm = model.matrix(~ spca_clusters, acc@meta.data)
-  betamat.transform = diag(nrow=12)
-  dimnames(betamat.transform) = rep(list(colnames(mm)), 2)
-  subtract_coefs = c('spca_clusters1','spca_clusters7','spca_clusters8')
-  betamat.transform[subtract_coefs, 'spca_clusters2'] = -1 / (length(subtract_coefs)+1)
-  mm = mm %*% solve(t(betamat.transform))
-  colnames(mm)[3] = 'cls_2_vs_average'
-  lm(
-    spca ~ 0 + mm,
-    list(spca = acc[['spca']]@cell.embeddings, mm = mm)
-  )
-  lm(
-    spca ~ recurrence,
-    list(spca = acc[['spca']]@cell.embeddings, recurrence = acc$recurrence),
-    subset = !is.na(acc$recurrence)
-  )
-
   acc
 }
 
