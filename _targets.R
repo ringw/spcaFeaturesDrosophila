@@ -1215,5 +1215,6 @@ list(
   ),
   acc_figures,
   tar_combine(acc.figures, acc_figures),
-  midgut_supplement_sce
+  midgut_supplement_sce,
+  score_models_supplement
 )
