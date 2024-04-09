@@ -1,6 +1,7 @@
 # Supplemental figures for scoring model selection.
 score_models_supplement <- list(
   tar_target(
+    fig.laplacian,
     save_figure(
       "figure/Model-Selection/Graph-Laplacian-Spectrum.pdf",
       plotGraphLaplacianMatrices(
