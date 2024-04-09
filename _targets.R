@@ -1122,7 +1122,8 @@ list(
             ref_group_names='1'
           ),
           out_dir = output_path,
-          HMM = TRUE
+          HMM = TRUE,
+          no_plot = TRUE
         )
       )
       output_path
