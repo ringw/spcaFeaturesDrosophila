@@ -44,8 +44,8 @@ tiny_violin_plot <- function(seurat, column_to_use, levels_to_use, feature_to_us
 
 # ECDF plot ----
 
-plot_spca_cdf <- function(seurat, column_to_use, levels_to_use, spca_index) {
-  data <- seurat %>% FetchData(c(column_to_use, paste0("SPARSE_", spca_index))) %>%
+plot_spca_cdf <- function(seurat, column_to_use, levels_to_use, feature_to_use) {
+  data <- seurat %>% FetchData(c(column_to_use, feature_to_use)) %>%
     subset(as.character(.[, 1]) %in% levels_to_use)
   spca_samples <- (
     data[, 2] %>%
