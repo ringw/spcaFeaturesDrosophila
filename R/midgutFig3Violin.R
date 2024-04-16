@@ -1,8 +1,5 @@
 # Violin plot ----
 
-
-# ECDF plot ----
-
 # Stroke color (reduce lightness of EB color so that the line shows up).
 midgut.colors.stroke = c(
   'ISC'=hsv(0.88, 0.75, 0.97),
@@ -26,7 +23,7 @@ tiny_violin_plot <- function(seurat, column_to_use, levels_to_use, feature_to_us
   # Display 500 of the embedding values.
   jitter_data <- data %>%
     group_by(cluster) %>%
-    reframe(embedding = embedding %>% sample(pmin(length(.), 500)))
+    summarise(embedding = embedding %>% sample(pmin(length(.), 500)))
 
   rasterise(
     ggplot(data, aes(cluster, embedding, fill=cluster))
@@ -44,6 +41,8 @@ tiny_violin_plot <- function(seurat, column_to_use, levels_to_use, feature_to_us
     plot.margin = margin(1, 1, 1, 1), aspect.ratio = 0.618
   )
 }
+
+# ECDF plot ----
 
 plot_spca_cdf <- function(seurat, column_to_use, levels_to_use, spca_index) {
   data <- seurat %>% FetchData(c(column_to_use, paste0("SPARSE_", spca_index))) %>%

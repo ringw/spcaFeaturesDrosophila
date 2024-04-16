@@ -1068,7 +1068,8 @@ list(
 
   # Midgut (Both inDrop and 10X) figures
   midgut_figures,
-  tar_combine(midgut.figures, midgut_figures),
+  midgut_figures_2,
+  tar_combine(midgut.figures, list(midgut_figures, midgut_figures_2)),
 
   # Adenoid Cystic Carcinoma sample
   tar_download(
