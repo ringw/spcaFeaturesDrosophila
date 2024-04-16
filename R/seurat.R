@@ -134,7 +134,7 @@ seurat_spca_from_feature_loadings <- function(
   # the mean is 0.
   dataSds = dataSds %>% replace(dataMeans == 0, 1)
   scale_data_from_zero = (
-    seurat[['RNA']]@scale.data[rownames(feature_loadings), ]
+    seurat[[assay]]@scale.data[rownames(feature_loadings), ]
     + (
       (
         if (seurat@commands[[
@@ -189,7 +189,7 @@ seurat_spca_from_feature_loadings_nocenter <- function(
   # data should be nonnegative, so we will update sd to a pseudo-sd of "1" if
   # the mean is 0.
   dataSds = dataSds %>% replace(dataMeans == 0, 1)
-  cell_embeddings = t(seurat[['RNA']]@scale.data[rownames(feature_loadings), ]) %*% feature_loadings
+  cell_embeddings = t(seurat[[assay]]@scale.data[rownames(feature_loadings), ]) %*% feature_loadings
   stdev = colSds(cell_embeddings)
   obj = CreateDimReducObject(
     cell_embeddings,
