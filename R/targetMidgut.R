@@ -38,5 +38,32 @@ midgut_figures_2 <- list(
       12,
       6
     )
+  ),
+  tar_target(
+    indrop.expl.var.stats.logumi,
+    midgut_expl_var_stem_like(indrop, indrop.sct.pca)
+  ),
+  tar_target(
+    indrop.expl.var.stemlike.inputs,
+    c("pca", "spca2pca", "pca.sct")
+  ),
+  tar_file(
+    fig.indrop.expl.var.stemlike,
+    save_figure(
+      paste0("figure/Midgut/ExplVar-", indrop.expl.var.stemlike.inputs, ".pdf"),
+      plot_midgut_expl_var(indrop.expl.var.stats.logumi, indrop.expl.var.stemlike.inputs),
+      4,
+      1.25
+    ),
+    pattern = map(indrop.expl.var.stemlike.inputs)
+  ),
+  tar_file(
+    fig.indrop.expl.var.stacked,
+    save_figure(
+      "figure/Midgut/ExplVar-ISC-EB.pdf",
+      midgut_expl_var_stem_between(indrop),
+      3, 3
+    ),
+    packages = c(tar_option_get("packages"), "ggpattern")
   )
 )
