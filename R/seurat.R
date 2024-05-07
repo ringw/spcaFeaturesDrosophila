@@ -121,9 +121,11 @@ seurat_spca_compute_feature_loadings <- function(
 }
 
 seurat_spca_from_feature_loadings <- function(
-  feature_loadings, seurat, assay, do.correct.elbow
+  feature_loadings, seurat, assay, do.correct.elbow,
+  do.rename.features = TRUE
 ) {
-  colnames(feature_loadings) = paste0('SPARSE_', seq(ncol(feature_loadings)))
+  if (do.rename.features)
+    colnames(feature_loadings) <- paste0('SPARSE_', seq(ncol(feature_loadings)))
   dataMeans = rowMeans(
     seurat[[assay]]@data[rownames(feature_loadings), ]
   )
@@ -133,19 +135,20 @@ seurat_spca_from_feature_loadings <- function(
   # data should be nonnegative, so we will update sd to a pseudo-sd of "1" if
   # the mean is 0.
   dataSds = dataSds %>% replace(dataMeans == 0, 1)
+  scale_data_command_name <- str_glue("ScaleData.{assay}")
+  if (scale_data_command_name %in% names(seurat@commands))
+    scale_data_command <- seurat@commands[[scale_data_command_name]]
+  else
+    scale_data_command <- list(do.center=TRUE, do.scale=TRUE)
   scale_data_from_zero = (
     seurat[[assay]]@scale.data[rownames(feature_loadings), ]
     + (
       (
-        if (seurat@commands[[
-          paste('ScaleData', assay, sep='.')
-        ]]$do.center)
+        if (scale_data_command$do.center)
         dataMeans
         else 0
       ) / (
-        if (seurat@commands[[
-          paste('ScaleData', assay, sep='.')
-        ]]$do.scale)
+        if (scale_data_command$do.scale)
         dataSds
         else 1
       )
