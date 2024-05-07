@@ -65,5 +65,52 @@ midgut_figures_2 <- list(
       3, 3
     ),
     packages = c(tar_option_get("packages"), "ggpattern")
+  ),
+
+  tar_target(
+    indrop.spca.dimreduc.sklearn,
+    seurat_spca_from_feature_loadings(
+      seurat_joint_spca(
+        indrop.pca,
+        alpha = 0.265,
+        ridge_alpha = 0.01,
+        n_components = 50
+      ) %>%
+        t,
+      indrop.pca,
+      "RNA",
+      do.correct.elbow = TRUE
+    )
+  ),
+  tar_target(
+    indrop.spca.dimreduc.elasticnet,
+    seurat_spca_from_feature_loadings(
+      seurat_elasticnet_spca(
+        indrop.pca,
+        varnum = 8,
+        n_components = 50
+      ),
+      indrop.pca,
+      "RNA",
+      do.correct.elbow = TRUE,
+      do.rename.features = FALSE
+    ),
+    cue = tar_cue("never")
+  ),
+  tar_file(
+    fig.indrop.feature.loadings,
+    tribble(
+      ~name, ~dimreduc, ~k,
+      "SKLearn", indrop.spca.dimreduc.sklearn, 20,
+      "LASSO", indrop.spca.dimreduc.elasticnet, 8,
+      "OptimalSPCA", indrop.spca.models[[4]], 8
+    ) %>%
+      rowwise %>%
+      mutate(
+        gg = make_dimreduc_img(dimreduc, k=k) %>% list,
+        filename = str_glue("figure/Midgut/Feature-Loadings-{name}.pdf"),
+        ggsave = ggsave(filename, gg, width=4, height=6)
+      ) %>%
+      pull(filename)
   )
 )
