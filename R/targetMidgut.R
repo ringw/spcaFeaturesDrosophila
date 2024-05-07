@@ -112,5 +112,22 @@ midgut_figures_2 <- list(
         ggsave = ggsave(filename, gg, width=4, height=6)
       ) %>%
       pull(filename)
+  ),
+  tar_map(
+    tibble(feature = c("SPARSE_1", "SPARSE_26")),
+    tar_file(
+      fig.indrop.loadings,
+      save_figure(
+        paste0("figure/Midgut/Feature-Loadings-", feature, ".pdf"),
+        (
+          spc_tile_plot(indrop.spca.models[[4]], feature)
+          + guides(fill = guide_none())
+        ),
+        width = 1.2,
+        height = 3.2,
+        device = CairoPDF
+      ),
+      packages = tar_option_get("packages") %>% c("Cairo")
+    )
   )
 )

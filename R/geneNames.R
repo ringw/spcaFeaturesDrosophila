@@ -4,6 +4,7 @@ gene_names <- list(
   `E(spl)malpha-BFM`="E(spl)m\u03B1",
   `E(spl)mbeta-HLH`="E(spl)m\u03B2",
   `E(spl)m3-HLH`="E(spl)m3",
+  alphaTry="\u03B1Try",
   betaTry="\u03B2Try",
   lrRNA="mt:lrRNA",
   # From latest Flybase release
