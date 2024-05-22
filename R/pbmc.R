@@ -88,6 +88,53 @@ create_genes_non_overlapping_mask <- function(gene_list, annotations) {
   as.matrix(1 - antiMask[gene_list, gene_list])
 }
 
+peaks_calculate_scaled_gram_matrix <- function(seurat, dims, npeaks = NULL, threshold_covar = 0.01) {
+  peak_wts <- (
+    seurat[["lsi"]]@feature.loadings[, dims]^2
+    %*%
+    seurat[["lsi"]]@stdev[dims]^2
+  )
+  if (!is.null(npeaks)) {
+    which_peaks <- rank(peak_wts, ties="first") >= length(peak_wts) - npeaks + 1
+    data <- seurat[["peaks"]]@data[
+      rownames(seurat[["lsi"]]@feature.loadings)[which_peaks]
+      ,
+    ]
+  } else {
+    data <- seurat[["peaks"]]@data[
+      rownames(seurat[["lsi"]]@feature.loadings)
+      ,
+    ]
+  }
+  scale_data_t <- scale(t(data))
+  seurat@misc$covar <- as.matrix(t(scale_data_t) %*% scale_data_t) / nrow(scale_data_t)
+  if (threshold_covar)
+    seurat@misc$covar <- seurat@misc$covar %>%
+      replace(abs(.) < threshold_covar, 0)
+  seurat
+}
+
+peaks_spca_from_feature_loadings <- function(
+  seurat,
+  feature.loadings
+) {
+  seurat[["peaks"]]@scale.data <- seurat[["peaks"]]@data[
+    rownames(feature.loadings),
+  ] %>%
+    t %>%
+    as.matrix %>%
+    scale %>%
+    t
+  seurat[["spca"]] <- seurat %>%
+    seurat_spca_from_feature_loadings(
+      feature.loadings,
+      .,
+      assay = "peaks",
+      do.correct.elbow = FALSE
+    )
+  seurat
+}
+
 pbmc_urls <- list(
   tar_download(
     pbmc.atac.filtered.peak.tar.gz,
@@ -210,5 +257,31 @@ pbmc_targets <- list(
       "ACTIVITY",
       do.corr = T
     )
+  ),
+  tar_target(
+    pbmc.atac.bypeak,
+    pbmc_to_annotated_signac(
+      pbmc.atac.h5, pbmc.atac.metadata, pbmc.atac.fragments, hsapiens_annotations
+    ) %>%
+      RunTFIDF %>%
+      FindTopFeatures(min.cutoff = 'q97') %>%
+      RunSVD %>%
+      peaks_calculate_scaled_gram_matrix(
+        threshold_covar = 0.02,
+        dims=1:15
+      )
+  ),
+  tar_target(
+    pbmc.atac.bypeak.linear.transformation,
+    seurat_spca_compute_feature_loadings(
+      pbmc.atac.bypeak@misc$covar, varnum=8, npcs=50, eigen_gap=0.005,
+      search_cap=500000, cgroup = memory_cgroups[1]
+    )
+  ),
+  tar_target(
+    pbmc.atac,
+    pbmc.atac.bypeak %>%
+      peaks_spca_from_feature_loadings(pbmc.atac.bypeak.linear.transformation) %>%
+      RunUMAP(reduction.name = "umap.spca", dims = 1:50, reduction = "spca")
   )
 )
