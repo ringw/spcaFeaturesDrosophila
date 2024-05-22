@@ -38,28 +38,27 @@ plot_indrop_pca <- function(indrop) (
   + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
   + theme_bw()
   + scale_color_manual(values=setNames(midgut.colors,NULL), guide=guide_legend(override.aes=list(size=3)))
-  + scale_y_continuous(limits=c(-9.5,NA), expand=rep(0.02,2), breaks=pretty_breaks(3))
-  + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
+  + scale_x_continuous(limits=c(-13,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
+  + scale_y_continuous(limits=c(-9.22658,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
     aes(label=label), data=plot_indrop_pca_annotations, color="black", size=3
   )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
     axis.ticks = element_line(color='transparent'),
-    panel.background = element_rect(fill=midgut.model.colors.bg[1])
+    panel.background = element_rect(fill=midgut.model.colors.bg[1]),
+    aspect.ratio = 3/4
   )
 )
 
 plot_indrop_spca_annotations <- tribble(
   ~umapspca_1, ~umapspca_2, ~label,
-  -6, 1, "aEC",
-  0, -7.5, "aEC",
-  4.35, 9, "mEC",
-  2.65, 2, "pEC"
-)
-
-plot_indrop_spca_connectors <- tribble(
-  ~x, ~y, ~xend, ~yend, 2.1, 2.15, 1, 2.8, 3.1, 1.55, 5.75, 0.75
+  -1.3, -6.75, "aEC",
+  # Amy-p+ cells
+  -1.5, 7.3, "aEC",
+  5.25, 6.6, "mEC",
+  1, 6, "pEC",
+  7, 1.5, "pEC"
 )
 
 plot_indrop_spca <- function(indrop) (
@@ -70,19 +69,16 @@ plot_indrop_spca <- function(indrop) (
   + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
   + theme_bw()
   + scale_color_manual(values=setNames(midgut.colors,NULL), guide=guide_legend(override.aes=list(size=3)))
-  + scale_y_continuous(limits=c(-9.5,NA), expand=rep(0.02,2), breaks=pretty_breaks(3))
   + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
+  + scale_y_continuous(limits=c(-7.547306,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
     aes(label=label), data=plot_indrop_spca_annotations, color="black", size=3
-  )
-  + geom_segment(
-    aes(x=x, y=y, xend=xend, yend=yend),
-    data=plot_indrop_spca_connectors, color="black", alpha=0.3
   )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
     axis.ticks = element_line(color='transparent'),
-    panel.background = element_rect(fill=midgut.model.colors.bg[2])
+    panel.background = element_rect(fill=midgut.model.colors.bg[2]),
+    aspect.ratio = 3/4
   )
 )
 
@@ -105,13 +101,20 @@ plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name) (
   ggplot(aes(UMAP_1, UMAP_2, color=feature))
   + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
   + theme_bw()
-  + scale_y_continuous(limits=c(-9.5,NA), expand=rep(0.02,2), breaks=pretty_breaks(3))
-  + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
-  + scale_color_viridis_c(option='magma')
+  + scale_x_continuous(
+    limits = \(ll) c(pmax(ll[1], -13), ll[2]),
+    expand=rep(0.02,2), breaks=pretty_breaks(4)
+  )
+  + scale_y_continuous(
+    limits = \(ll) c(quantile(indrop[[embedding]]@cell.embeddings[,2], 0.005), ll[2]),
+    expand=rep(0.02,2), breaks=pretty_breaks(4)
+  )
+  + scale_color_viridis_c(option='magma', end=0.9)
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
     axis.ticks = element_line(color='transparent'),
-    panel.background = element_rect(fill=midgut.model.colors.bg[bg_color])
+    panel.background = element_rect(fill=midgut.model.colors.bg[bg_color]),
+    aspect.ratio = 3/4
   )
 )
 

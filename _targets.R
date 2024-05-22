@@ -836,7 +836,8 @@ list(
   tar_target(
     indrop,
     spca_with_centered_umap(
-      indrop.pca, indrop.spca.models[[4]], dims=1:50
+      indrop.pca, indrop.spca.models[[4]], dims=1:50,
+      umap_transform=matrix(c(0,-1,-1,0), nrow=2)
     ) %>%
       FindNeighbors(dims=1:34, red="spca", nn.method = "rann") %>%
       FindClusters(res=1.0, random.seed=1) %>%
@@ -847,23 +848,23 @@ list(
           `EC-like`="0",
           EC.anterior1="1",
           EC.anterior2="2",
-          dEC1="3",
+          EC.posterior1="3",
           LFC1="4",
           `copper/iron`="5",
           EE.Ast1="6",
           EC.anterior3="7",
-          EC.posterior1="8",
-          dEC2="10",
+          EC.posterior2="8",
+          dEC1="10",
           EC.meso="12",
           EE.Ast2="13",
           others.1="14",
           `EC-like2`="15",
           cardia="16",
-          dEC3="17",
+          dEC2="17",
           EC.anterior4="18",
           others.2="19",
           LFC2="20",
-          EC.posterior2="21",
+          EC.posterior3="21",
           `EC-like3`="22",
           others.3="23",
           `EC-like3`="24"
