@@ -659,28 +659,6 @@ list(
     # spca models target which has an ETA of 12-24 hours.
     cue = tar_cue("never")
   ),
-  tar_map(
-    data.frame(ngenes = c(500, 1500, 2000)),
-    tar_target(
-      indrop.spca.model.ngenes,
-      with_seed(
-        0,
-        indrop.pca[['RNA']]@scale.data[
-          VariableFeatures(indrop.pca) %>% head(ngenes),
-        ] %>%
-          t %>%
-          var %>%
-          seurat_spca_compute_feature_loadings(
-            varnum=8, npcs=30, eigen_gap=0.001, search_cap=500000,
-            cgroup=memory_cgroups[1]
-          ) %>%
-          seurat_spca_from_feature_loadings(
-            indrop.pca, "RNA", do.correct.elbow = FALSE
-          )
-      ),
-      cue = tar_cue("never")
-    )
-  ),
   tar_target(
     indrop.pca.validation.model.pattern,
     as.list(1:4)
