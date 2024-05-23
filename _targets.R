@@ -697,7 +697,7 @@ list(
     bind_rows(
       pca=tibble(replicate = factor(1:4)) %>%
         rowwise %>%
-        reframe(
+        summarise(
           replicate,
           # FindNeighbors returns nn and snn. Keep only the list element snn in
           # a new list-type column.
@@ -710,7 +710,7 @@ list(
         ),
       spca=tibble(replicate = factor(1:4), obj = indrop.spca.models) %>%
         rowwise %>%
-        reframe(
+        summarise(
           replicate,
           snn = FindNeighbors(
             obj@cell.embeddings[, seq(obj@stdev > sqrt(2.5))],
@@ -729,7 +729,7 @@ list(
       by=character()
     ) %>%
       rowwise %>%
-      reframe(
+      summarise(
         model,
         replicate,
         random.seed,
@@ -757,13 +757,14 @@ list(
       indrop.eval.clusters,
       indrop.validation.clusters %>%
         group_by(model, replicate) %>%
-        reframe(
+        summarise(
           model,
           replicate,
           random.seed = unique(random.seed),
-          score = cross_join(
+          score = full_join(
             tibble(random.seed, fct1 = clustering),
-            tibble(random.seed2 = random.seed, fct2 = clustering)
+            tibble(random.seed2 = random.seed, fct2 = clustering),
+            by = character()
           ) %>%
             filter(random.seed != random.seed2) %>%
             rowwise %>%
@@ -778,7 +779,7 @@ list(
       indrop.eval.clusters.replicated,
       indrop.validation.clusters %>%
         group_by(model) %>%
-        reframe(
+        summarise(
           model,
           replicate,
           score = full_join(
