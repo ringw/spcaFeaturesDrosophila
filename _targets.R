@@ -193,19 +193,6 @@ midgut_figures = list(
     format = "file"
   ),
   tar_target(
-    indrop.cdf.spcs, c(1, 22)
-  ),
-  tar_target(
-    fig.indrop.cdf,
-    save_figure(
-      paste0("figure/Midgut/Indrop-CDF-SPC", indrop.cdf.spcs, ".pdf"),
-      plot_spca_cdf(indrop, "spca_classif", midgut.cdf.cluster.list, indrop.cdf.spcs),
-      width=3.25, height=2
-    ),
-    pattern = map(indrop.cdf.spcs),
-    format = "file"
-  ),
-  tar_target(
     fig.indrop.deg,
     save_figure(
       "figure/Midgut/Indrop-DEG.pdf",
