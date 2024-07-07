@@ -114,20 +114,42 @@ midgut_figures_2 <- list(
       pull(filename)
   ),
   tar_map(
-    tibble(feature = c("SPARSE_1", "SPARSE_26")),
+    tibble(feature = c("SPARSE_1", "SPARSE_26")) %>%
+      full_join(
+        tribble(~font_size, ~suffix_font_size, 4, "", 8, "-Thumbnail"),
+        character(0)
+      ),
+    names = feature | font_size,
     tar_file(
       fig.indrop.loadings,
       save_figure(
-        paste0("figure/Midgut/Feature-Loadings-", feature, ".pdf"),
+        paste0("figure/Midgut/Feature-Loadings-", feature, suffix_font_size, ".pdf"),
         (
-          spc_tile_plot(indrop.spca.models[[4]], feature)
+          spc_tile_plot(indrop.spca.models[[4]], feature, fontsize=font_size)
           + guides(fill = guide_none())
         ),
-        width = 1.2,
-        height = 3.2,
-        device = CairoPDF
+        width = if (font_size > 4) 1.75 else 1.2,
+        height = 3.2
       ),
       packages = tar_option_get("packages") %>% c("Cairo")
+    )
+  ),
+  tar_file(
+    fig.indrop.loadings.thumbnail.legend,
+    save_figure(
+      "figure/Midgut/Feature-Loadings-Thumbnail-Legend.pdf",
+      get_legend(
+        ggplot(data.frame(x=c(0, 0.5)), aes(x, y=0, color=x))
+        + geom_tile()
+        + scale_color_viridis_c(
+          breaks = c(0, 0.25, 0.5),
+          labels = percent, end = 0.5,
+          guide = guide_colorbar(title = NULL, barwidth = 2.5, barheight = 0.75)
+        )
+        + theme(legend.position = "bottom")
+      ),
+      width = 1.25,
+      height = 0.5
     )
   )
 )
