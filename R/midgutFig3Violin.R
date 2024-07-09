@@ -27,11 +27,11 @@ tiny_violin_plot <- function(seurat, column_to_use, levels_to_use, feature_to_us
 
   rasterise(
     ggplot(data, aes(cluster, embedding, fill=cluster))
-    + geom_violin(linewidth=0.25, scale="width")
-    + geom_jitter(data=jitter_data, shape=16, size = 0.01),
+    + geom_violin(linewidth=0.5, scale="width")
+    + geom_jitter(data=jitter_data, shape=16, stroke=NA, size=0.6),
     dpi = 300
   ) + theme_cowplot() + scale_fill_manual(
-    values = midgut.colors, guide=guide_none()
+    values = c(midgut.colors, setNames(midgut.colors["EC-like"], "")), guide=guide_none()
   ) + scale_y_continuous(
     # Expand the y-axis less since it is a tiny plot
     expand = rep(0.02, 2)
@@ -82,6 +82,6 @@ plot_spca_cdf <- function(seurat, column_to_use, levels_to_use, feature_to_use) 
   ) + theme_cowplot() + theme(
     plot.margin = margin(1, 1, 1, 1), aspect.ratio = 0.618,
     # y-labels still didn't have enough space at the top with 1pt margin.
-    axis.text.y = element_text(vjust = 0.7)
+    axis.text.y = element_text(vjust = 0.8)
   )
 }

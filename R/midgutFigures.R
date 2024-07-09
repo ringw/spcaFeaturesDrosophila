@@ -1,18 +1,18 @@
 midgut.colors = c(
   'ISC'=hsv(0.88, 0.75, 0.97),
-  'EB'=hsv(0.166, 1, 0.95),
+  'EB'=hsv(0.166, 1, 0.93),
   'dEC'=hcl(137, 57, 71),
   'EC'=hcl(253, 74, 48),
   'EC-like'=hcl(230, 34, 72),
   'EE'=hcl(300, 72, 46),
-  'copper/iron'=hcl(48, 63, 75),
+  'copper/iron'="#ae786e",
   'LFC'=hcl(180, 38, 88),
-  'cardia'=hcl(9, 66, 32),
+  'cardia'="#891616",
   'bg'=hcl(c = 0, l = 87)
 )
 midgut.col = as.list(midgut.colors)
 
-midgut.model.colors.bg = c(PCA=hcl(30, 8, 99), SPCA=hcl(129,7,98))
+midgut.model.colors.bg = c(PCA=hcl(30, 8, 99), SPCA=hcl(129,6,99))
 midgut.model.colors.legend = c(PCA=hcl(30, 12, 95), SPCA=hcl(129,11,95))
 
 # Outlier cells in the -UMAP_2 direction in PCA-UMAP:
@@ -23,12 +23,13 @@ midgut.model.colors.legend = c(PCA=hcl(30, 12, 95), SPCA=hcl(129,11,95))
 
 plot_indrop_pca_annotations <- tribble(
   ~UMAP_1, ~UMAP_2, ~label,
-  -9, 1.1, "aEC",
-  0.8, -8.25, "aEC",
-  7.75, 0.5, "aEC",
-  11, 2, "mEC",
-  4, -0.6, "pEC",
-  0.75, 5.5, "pEC"
+  -10.5, 2.45, "aEC",
+  -0.5, -8.25, "aEC",
+  9.5, 7.25, "mEC",
+  #Gs2+
+  -4.75, 0.4, "pEC",
+  # Above/left: LManVI+. Below: Mur29B+
+  6.75, 0.25, "pEC"
 )
 
 plot_indrop_pca <- function(indrop) (
@@ -41,13 +42,20 @@ plot_indrop_pca <- function(indrop) (
   + scale_x_continuous(limits=c(-13,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + scale_y_continuous(limits=c(-9.22658,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
-    aes(label=label), data=plot_indrop_pca_annotations, color="black", size=3
+    aes(label=label), data=plot_indrop_pca_annotations, color="black", size=6.5
   )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
     axis.ticks = element_line(color='transparent'),
     panel.background = element_rect(fill=midgut.model.colors.bg[1]),
-    aspect.ratio = 3/4
+    aspect.ratio = 3/4,
+
+    # Double the relative size of text as we created an over-sized pdf.
+    axis.title = element_text(size = rel(1.6)),
+    axis.title.x = element_text(margin = margin(1, 0, 0, 0)),
+    axis.title.y = element_text(margin = margin(0, -7, 0, 0)),
+    axis.text = element_text(size = rel(1.6)),
+    plot.margin = margin(t = 1, r = 1, b = 1, l = 1)
   )
 )
 
@@ -55,8 +63,8 @@ plot_indrop_spca_annotations <- tribble(
   ~umapspca_1, ~umapspca_2, ~label,
   -1.3, -6.75, "aEC",
   # Amy-p+ cells
-  -1.5, 7.3, "aEC",
-  5.25, 6.6, "mEC",
+  -1.7, 7.3, "aEC",
+  5.75, 6.25, "mEC",
   1, 6, "pEC",
   7, 1.5, "pEC"
 )
@@ -72,13 +80,19 @@ plot_indrop_spca <- function(indrop) (
   + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
   + scale_y_continuous(limits=c(-7.547306,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
-    aes(label=label), data=plot_indrop_spca_annotations, color="black", size=3
+    aes(label=label), data=plot_indrop_spca_annotations, color="black", size=6.5
   )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
     axis.ticks = element_line(color='transparent'),
     panel.background = element_rect(fill=midgut.model.colors.bg[2]),
-    aspect.ratio = 3/4
+    aspect.ratio = 3/4,
+
+    # Double the relative size of text as we created an over-sized pdf.
+    axis.title = element_text(size = rel(1.6)),
+    axis.title.x = element_text(margin = margin(1, 0, 0, 0)),
+    axis.title.y = element_text(margin = margin(0, -7, 0, 0)),
+    axis.text = element_text(size = rel(1.6))
   )
 )
 
@@ -92,12 +106,21 @@ plot_midgut_legend <- function(indrop) get_legend(
   + labs(color=NULL)
 )
 
-plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name) (
+plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name, limits=NULL) (
   indrop[[embedding]]@cell.embeddings %*%
     matrix(diag(2), nrow=2, dimnames=list(NULL, c("UMAP_1", "UMAP_2"))) %>%
     as.data.frame %>%
     cbind(indrop@meta.data) %>%
-    cbind(FetchData(indrop, feature_name) %>% pull(1) %>% matrix(ncol = 1, dimnames=list(names(.), "feature"))) %>%
+    cbind(
+      FetchData(indrop, feature_name) %>%
+        pull(1) %>%
+        matrix(ncol = 1, dimnames=list(names(.), "feature")) %>%
+        `*`(
+          if (grepl("SPARSE_", feature_name))
+            1/sum(unlist(indrop[['spca']][, feature_name]))
+          else 1
+        )
+    ) %>%
   ggplot(aes(UMAP_1, UMAP_2, color=feature))
   + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
   + theme_bw()
@@ -109,21 +132,30 @@ plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name) (
     limits = \(ll) c(quantile(indrop[[embedding]]@cell.embeddings[,2], 0.005), ll[2]),
     expand=rep(0.02,2), breaks=pretty_breaks(4)
   )
-  + scale_color_viridis_c(option='magma', end=0.9)
+  + scale_color_viridis_c(
+    option='magma', end=0.9, limits=limits,
+    oob=squish
+  )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
     axis.ticks = element_line(color='transparent'),
     panel.background = element_rect(fill=midgut.model.colors.bg[bg_color]),
-    aspect.ratio = 3/4
+    aspect.ratio = 3/4,
+
+    # Double the relative size of text as we created an over-sized pdf.
+    axis.title = element_text(size = rel(1.6)),
+    axis.title.x = element_text(margin = margin(1, 0, 0, 0)),
+    axis.title.y = element_text(margin = margin(0, -7, 0, 0)),
+    axis.text = element_text(size = rel(1.6))
   )
 )
 
-plot_midgut_feature_legend <- function(indrop, feature_name) get_legend(
-  plot_midgut_feature(indrop, "PCA", "umap", feature_name)
+plot_midgut_feature_legend <- function(indrop, feature_name="betaTry", limits=NULL, legend.direction="horizontal", legend.name="LogNormalize") get_legend(
+  plot_midgut_feature(indrop, "PCA", "umap", feature_name, limits)
     + geom_point()
-    + labs(color="LogNormalize")
+    + labs(color=legend.name)
     + theme_bw()
-    + theme(legend.direction = "horizontal")
+    + theme(legend.direction = legend.direction)
 )
 
 plot_midgut_model_background_legend <- function() get_legend(

@@ -79,7 +79,7 @@ plot_midgut_expl_var <- function(
     + geom_bar(stat='identity')
     + coord_flip()
     + scale_x_discrete(limits=rev)
-    + scale_y_continuous(expand=c(0,0), labels=percent, breaks=scales::breaks_pretty(3), limits=c(0,0.5))
+    + scale_y_continuous(expand=c(0,0), labels=percent, breaks=scales::breaks_pretty(3), limits=c(0,0.25))
     + scale_fill_manual(
       values = c(midgut.colors, `stem-like`="goldenrod"),
       guide = guide_none()
@@ -90,7 +90,8 @@ plot_midgut_expl_var <- function(
 
 midgut_expl_var_stem_between <- function(
   indrop,
-  variable = log(indrop$nCount_RNA)
+  variable = log(indrop$nCount_RNA),
+  legend.position = "right"
 ) {
   mn.pca = manova(
     pca ~ pca_clusters,
@@ -234,6 +235,10 @@ midgut_expl_var_stem_between <- function(
       color='black',
       fill='transparent'
     )
+    + theme(
+      legend.position = legend.position,
+      plot.margin = list(right = NULL, bottom = margin(5.5, 10, 44, 100))[[legend.position]]
+    )
     ,
     stem.graph
     %>% subset(xmin >= 1.5)
@@ -269,7 +274,16 @@ midgut_expl_var_stem_between <- function(
       values=c(between=midgut.col$EB, EB=midgut.col$EB, ISC=midgut.col$ISC, logUMI=hsv(0.42, 0.55, 0.72)),
       guide=guide_legend(title='Var. Source')
     )
+    + theme(
+      legend.position = legend.position,
+      plot.margin = list(right = NULL, bottom = margin(5.5, 100, 5.5, 5.5))[[legend.position]]
+      ,
+      legend.title = list(
+        right=NULL,
+        bottom=element_text(size=rel(0.8))
+      )[[legend.position]]
+    )
     ,
-    widths=c(1,1.55)
+    widths=list(right = c(1,1.55), bottom = c(1.35,1))[[legend.position]]
   )
 }

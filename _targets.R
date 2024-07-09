@@ -95,7 +95,7 @@ midgut_figures = list(
   tar_target(
     fig.indrop.legend,
     save_figure(
-      "figure/Midgut/UMAP-Legend.pdf",
+      "figure/Midgut/Feature-Legend-Clustering.pdf",
       plot_midgut_legend(indrop),
       width = 4, height = 0.6
     ),
@@ -104,7 +104,7 @@ midgut_figures = list(
   tar_target(
     fig.indrop.pca.ec,
     save_figure(
-      "figure/Midgut/UMAP-3-PCA-EC.pdf",
+      "figure/Midgut/UMAP-Feature-PCA-betaTry.pdf",
       plot_midgut_feature(indrop, "PCA", "umap", "betaTry"),
       width = 5, height = 4
     ),
@@ -113,7 +113,7 @@ midgut_figures = list(
   tar_target(
     fig.indrop.spca.ec,
     save_figure(
-      "figure/Midgut/UMAP-7-SPCA-EC.pdf",
+      "figure/Midgut/UMAP-Feature-SPCA-betaTry.pdf",
       plot_midgut_feature(indrop, "SPCA", "umap.spca", "betaTry"),
       width = 5, height = 4
     ),
@@ -134,7 +134,23 @@ midgut_figures = list(
       "His3.3A",
       # Others (not called yet as dEC markers?)
       "fmt", "trol",
-      "SPARSE_1", "SPARSE_22"
+      "SPARSE_1", "SPARSE_26"
+    )
+  ),
+  tar_target(indrop.feature.printing.limits, list(`E(spl)mbeta-HLH`=c(0,4.5), SPARSE_26=c(0,4.5))),
+  tar_target(
+    indrop.pca.stemlike.inset,
+    annotate("rect", xmin=-3.8, ymin=7.7, xmax=-0.2, ymax=2.5, fill="transparent", color="black", linewidth=0.5)
+  ),
+  tar_target(
+    indrop.spca.stemlike.inset,
+    annotate("rect",xmin=-6.5, ymin=4.9, xmax=-2.5, ymax=2.3, fill="transparent", color="black", linewidth=0.5)
+  ),
+  tar_target(
+    indrop.feature.printing.annot,
+    list(
+      PCA=list(`E(spl)mbeta-HLH`=indrop.pca.stemlike.inset, SPARSE_26=indrop.pca.stemlike.inset),
+      SPCA=list(`E(spl)mbeta-HLH`=indrop.spca.stemlike.inset, SPARSE_26=indrop.spca.stemlike.inset)
     )
   ),
   tar_target(
@@ -149,22 +165,112 @@ midgut_figures = list(
         indrop,
         bg_color=indrop.feature.printing %>% pull(name),
         indrop.feature.printing %>% pull(embedding),
+        indrop.feature.list,
+        limits=indrop.feature.printing.limits[[indrop.feature.list]]
+      ) + indrop.feature.printing.annot[[
+        indrop.feature.printing %>% pull(name)
+      ]][[
         indrop.feature.list
-      ),
+      ]],
       width = 5, height = 4
     ),
     format = "file",
     pattern = cross(indrop.feature.list, indrop.feature.printing)
   ),
   tar_target(
-    fig.indrop.legend.ec,
+    indrop.inset.theme,
+    theme(
+      aspect.ratio = 0.75,
+      axis.text = element_text(size = 12)
+    )
+  ),
+  tar_target(
+    fig.indrop.pca.espl.inset,
     save_figure(
-      "figure/Midgut/UMAP-betaTry-Legend.pdf",
+      "figure/Midgut/Feature-PCA-E(spl)mbeta-HLH-Inset.pdf",
+      plot_midgut_feature(
+        indrop,
+        bg_color="PCA",
+        "umap",
+        "E(spl)mbeta-HLH",
+        limits=indrop.feature.printing.limits[[1]]
+      ) + scale_x_continuous(
+        name=NULL, breaks=pretty_breaks(3)
+      ) + scale_y_continuous(
+        name=NULL, breaks=pretty_breaks(3)
+      ) + coord_cartesian(
+        c(indrop.pca.stemlike.inset$data$xmin, indrop.pca.stemlike.inset$data$xmax),
+        c(indrop.pca.stemlike.inset$data$ymax, indrop.pca.stemlike.inset$data$ymin)
+      ) + indrop.inset.theme,
+      2,
+      1.5
+    )
+  ),
+  tar_target(
+    fig.indrop.spca.espl.inset,
+    save_figure(
+      "figure/Midgut/Feature-SPCA-E(spl)mbeta-HLH-Inset.pdf",
+      plot_midgut_feature(
+        indrop,
+        bg_color="SPCA",
+        "umap.spca",
+        "E(spl)mbeta-HLH",
+        limits=indrop.feature.printing.limits[[1]]
+      ) + scale_x_continuous(
+        name=NULL, breaks=pretty_breaks(3)
+      ) + scale_y_continuous(
+        name=NULL, breaks=c(3,4)
+      ) + coord_cartesian(
+        c(indrop.spca.stemlike.inset$data$xmin, indrop.spca.stemlike.inset$data$xmax),
+        c(indrop.spca.stemlike.inset$data$ymax, indrop.spca.stemlike.inset$data$ymin)
+      ) + indrop.inset.theme,
+      2,
+      1.5
+    )
+  ),
+  tar_file(
+    fig.indrop.spca.spc26.inset,
+    save_figure(
+      "figure/Midgut/Feature-SPCA-SPARSE_26-Inset.pdf",
+      plot_midgut_feature(
+        indrop,
+        bg_color="SPCA",
+        "umap.spca",
+        "SPARSE_26",
+        limits=indrop.feature.printing.limits[[1]]
+      ) + scale_x_continuous(
+        name=NULL, breaks=pretty_breaks(3)
+      ) + scale_y_continuous(
+        name=NULL, breaks=c(3,4)
+      ) + coord_cartesian(
+        c(indrop.spca.stemlike.inset$data$xmin, indrop.spca.stemlike.inset$data$xmax),
+        c(indrop.spca.stemlike.inset$data$ymax, indrop.spca.stemlike.inset$data$ymin)
+      ) + indrop.inset.theme,
+      2,
+      1.5
+    )
+  ),
+  tar_file(
+    fig.indrop.legend.betaTry,
+    save_figure(
+      "figure/Midgut/Feature-Legend-betaTry.pdf",
       plot_midgut_feature_legend(indrop, "betaTry"),
       width = 2.65, height = 0.6
     )
   ),
-  tar_target(
+  tar_file(
+    fig.indrop.legend.thumbnail,
+    save_figure(
+      "figure/Midgut/Feature-Legend-Thumbnail.pdf",
+      plot_midgut_feature_legend(
+        indrop, limits=c(0,4.5),
+        legend.direction="vertical",
+        legend.name=NULL
+      ),
+      width = 0.5, height = 1.5
+    )
+  ),
+  tar_file(
     fig.indrop.model.background.legend,
     save_figure(
       "figure/Midgut/Model-Background-Legend.pdf",
@@ -177,20 +283,78 @@ midgut_figures = list(
   ),
   tar_target(
     indrop.violin.pcs,
-    c(SPC1="SPARSE_1", SPC22="SPARSE_22", PC3="PC_3", PC7="PC_7") %>%
-      enframe
+    tribble(
+      ~name, ~value, ~group_by,
+      "SPC1", "SPARSE_1", "spca_classif",
+      "SPC26", "SPARSE_26", "spca_classif",
+      "PC3", "PC_3", "pca_classif",
+      "PC7", "PC_7", "pca_classif"
+    )
   ),
   tar_target(
     fig.indrop.violin,
     save_figure(
       paste0("figure/Midgut/Indrop-Violin-", indrop.violin.pcs$name, ".pdf"),
       tiny_violin_plot(
-        indrop, "spca_classif", midgut.cdf.cluster.list, indrop.violin.pcs$value
+        indrop, indrop.violin.pcs$group_by,
+        midgut.cdf.cluster.list, indrop.violin.pcs$value
       ),
-      width=3.25, height=2
+      width=4.1, height=2.5
     ),
     pattern = map(indrop.violin.pcs),
     format = "file"
+  ),
+  tar_target(
+    fig.indrop.thumbnail.violin,
+    save_figure(
+      paste0("figure/Midgut/Indrop-Thumbnail-Violin-", indrop.violin.pcs$name, ".pdf"),
+      tiny_violin_plot(
+        indrop %>%
+          AddMetaData(.$pca_classif %>% recode(`EC-like`=""), "pca_classif") %>%
+          AddMetaData(.$spca_classif %>% recode(`EC-like`=""), "spca_classif"),
+        indrop.violin.pcs$group_by,
+        midgut.cdf.cluster.list %>% replace(. == "EC-like", ""), indrop.violin.pcs$value
+      ) + theme(
+        plot.margin = margin(2.5, 1, 1, 1), aspect.ratio = 0.618,
+        axis.text = element_text(size = 20)
+      ),
+      width=3.5, height=2.3
+    ),
+    pattern = map(indrop.violin.pcs),
+    format = "file"
+  ),
+  tar_map(
+    tribble(~name, ~value, "SPC1", "SPARSE_1", "SPC26", "SPARSE_26"),
+    names = name,
+    tar_file(
+      fig.indrop.cdf,
+      save_figure(
+        paste0("figure/Midgut/Indrop-Violin-CDF-", name, ".pdf"),
+        plot_spca_cdf(
+          indrop,
+          "spca_classif",
+          midgut.cdf.cluster.list,
+          value
+        ),
+        width = 4.1, height = 2.5
+      )
+    ),
+    tar_file(
+      fig.indrop.thumbnail.cdf,
+      save_figure(
+        paste0("figure/Midgut/Indrop-Thumbnail-Violin-CDF-", name, ".pdf"),
+        plot_spca_cdf(
+          indrop,
+          "spca_classif",
+          midgut.cdf.cluster.list,
+          value
+        ) + theme(
+          plot.margin = margin(5.5, 1, 1, 1), aspect.ratio = 0.7,
+          axis.text = element_text(size = 20)
+        ),
+        width = 3.5, height = 2.3
+      )
+    )
   ),
   tar_target(
     fig.indrop.deg,
@@ -262,10 +426,12 @@ acc_features <- tribble(
   "DLL1", 8, quote(list(list(geom="tile", x=0, y=1, width=4, height=3))),
   "NOTCH3", 8, NULL,
   "SPARSE_11", 8, NULL,
+  "SPARSE_14", 8, NULL,
   "SPARSE_26", NA, NULL,
   "SPARSE_12", NA, NULL,
   "SPARSE_3", NA, NULL,
-  "FN1", NA, NULL
+  "FN1", NA, NULL,
+  "SPARSE_29", 8, NULL
 )
 acc_features_max_scale <- 8
 acc_query <- tribble(
@@ -285,7 +451,19 @@ acc_figures = list(
   tar_target(
     fig.acc.annotated,
     save_figure("figure/ACC/ACC-Annotation.pdf",
-    acc_annotated_figure(acc, "aneuploidy", guide = "Copy Number", limits = c(0, 0.2), oob_squish = TRUE), width=4, height=3),
+    acc_annotated_figure(acc, "aneuploidy", guide = "CNV", limits = c(0, 0.2), oob_squish = TRUE)
+      + theme(text = element_text(size=16), aspect.ratio = 0.978),
+    width=4, height=3),
+    format = "file"
+  ),
+  tar_target(
+    fig.acc.annotated.narrow,
+    save_figure(
+      "figure/ACC/ACC-Annotation-Narrow.pdf",
+      acc_annotated_figure(acc, "aneuploidy", guide = "CNV Score", limits = c(0, 0.2), oob_squish = TRUE)
+      + theme(text = element_text(size=14), legend.position = "none"),
+      width=2.85, height=3
+    ),
     format = "file"
   ),
   tar_target(
@@ -384,9 +562,10 @@ acc_figures = list(
         paste0("figure/ACC/ACC-Feature-Inset-", feature, ".pdf"),
         nonneg_feature_plot_annotate(
           acc, feature, max_scale = 8, annotations = NULL
-        ) + theme(legend.position = "none"),
+        ) + scale_color_viridis_c(option="magma", end = 0.9, limits=c(0,8), oob=scales::squish)
+        + theme(legend.position = "none"),
         width = 2,
-        height = 4
+        height = 3
       ),
       format = "file"
     ),
@@ -598,6 +777,16 @@ list(
           list
       ),
     pattern = map(indrop.spca.param.k.input)
+  ),
+  tar_target(
+    indrop.spca.k4,
+    indrop.pca %>%
+      seurat_spca("covar", varnum=4, npcs=10, eigen_gap=0.01, search_cap=200000)
+  ),
+  tar_target(
+    indrop.spca.k5,
+    indrop.pca %>%
+      seurat_spca("covar", varnum=5, npcs=10, eigen_gap=0.01, search_cap=200000)
   ),
   tar_target(
     indrop.pca.quickCluster,
@@ -1036,7 +1225,7 @@ list(
   # Midgut (Both inDrop and 10X) figures
   midgut_figures,
   midgut_figures_2,
-  tar_combine(midgut.figures, list(midgut_figures, midgut_figures_2)),
+  # tar_combine(midgut.figures, list(midgut_figures, midgut_figures_2)),
 
   # Adenoid Cystic Carcinoma sample
   tar_download(
@@ -1178,12 +1367,8 @@ list(
       myCAF=c("MYLK", "MCAM", "TAGLN", "MYH11", "ACTA2")
     )
   ),
-  tar_target(
-    acc.spca.profiles,
-    acc %>% acc_add_components_from_umap %>% acc_make_feature_profiles(paste0("SPARSE_", 1:50))
-  ),
   acc_figures,
-  tar_combine(acc.figures, acc_figures),
+  # tar_combine(acc.figures, acc_figures),
   midgut_supplement_sce,
   score_models_supplement
 )
