@@ -20,23 +20,31 @@ acc_annotated_figure <- function(acc, variable = "proportion_cnv", guide = "P(CN
   acc[['umap.spca']]@cell.embeddings %>%
     cbind(acc@meta.data) %>%
     ggplot(aes(UMAP_1, UMAP_2, color=get(variable))) + rasterize(
-      geom_point(size = 0.08), dpi = 600
-    ) + scale_color_viridis_c(
-      option = 'rocket', begin = 0.05, end = 0.8,
+      geom_point(size = 0.5, stroke = NA), dpi = 600
+    ) + scale_color_gradient(
+      high = "#f4f756",
       limits = limits, labels = scales::percent,
       oob = if (oob_squish) scales::squish else scales::censor,
-      guide = guide_colorbar(title = guide)
+      breaks = pretty_breaks(2),
+      guide = guide_colorbar(title = guide, barwidth = 0.5, barheight = 4)
+    ) + scale_y_continuous(
+      breaks = breaks_pretty(3)
     ) + annotate(
-      "rect", xmin = -2.75, xmax = 5, ymin = -0.75, ymax = 8.5, color = 'black', fill = 'transparent'
+      "rect", xmin = -6, xmax = 3.75, ymin = -2.25, ymax = 9.75, color = 'black', fill = 'transparent'
     ) + annotate(
-      "text", 1.15, 9.5, label = "ACC"
+      "text", -1.125, 10.75, label = "ACC"
     ) + annotate(
-      "rect", xmin = -2.75, xmax = 6.5, ymin = -9.75, ymax = -4, color = 'black', fill = 'transparent'
+      "rect", xmin = -1.61, xmax = 8.41, ymin = -12.5, ymax = -5.3, color = 'black', fill = 'transparent'
     ) + annotate(
-      "text", 1.75, -3, label = "CAF"
-    ) + coord_cartesian(
-      c(NA, NA), c(-11, 10)
-    ) + theme_bw()
+      "text", 3.4, -4.3, label = "CAF"
+    ) + labs(
+      x = bquote(UMAP[1]), y = bquote(UMAP[2])
+    ) + theme_bw() + theme(
+      axis.title = element_text(size = rel(0.8)),
+      legend.title = element_text(size = rel(0.8)),
+      axis.title.y = element_text(margin = margin(0, -12, 0, 2)),
+      axis.title.x = element_text(margin = margin(-2, 0, 2, 0))
+    )
 }
 
 # Add the idents from the annotated figure.
@@ -468,12 +476,15 @@ acc_plot_feature_profiles <- function(acc, m) {
 
 acc_nonneg_feature_plot_gradient <- c(hcl(0, 0, 87), hcl(85, 33, 80), hcl(68, 37, 75), hcl(52, 40, 70), hcl(50, 57, 70), hcl(47, 64, 68), hcl(30, 84, 56), hcl(12, 103, 45))
 nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NULL, subset=NULL) {
-  xlim <- c(-3.25, 6.75)
-  ylim <- c(-10.25, 9.25)
+  xlim <- c(-6, 8.41)
+  ylim <- c(-12.5, 9.75)
   g <- cbind(
-    data.frame(feature = FetchData(acc, feature) %>% pull(feature)),
+    FetchData(acc, feature) %>%
+      dplyr::rename(c(feature=feature)) %>%
+      rownames_to_column,
     acc[['umap.spca']]@cell.embeddings
   ) %>%
+    arrange(openssl::md5(rowname)) %>%
     dplyr::filter(
       between(UMAP_1, xlim[1], xlim[2]),
       between(UMAP_2, ylim[1], ylim[2])
@@ -486,8 +497,8 @@ nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NU
       data = subset
     ),
     dpi = 300
-  ) + scale_color_gradientn(
-    colors = acc_nonneg_feature_plot_gradient,
+  ) + scale_color_viridis_c(
+    option = "magma",
     limits=c(0, if (is.null(max_scale)) NA else max_scale), oob=scales::squish,
     guide = guide_colorbar(title = feature %>% display_gene_names)
   ) + coord_cartesian(
@@ -496,10 +507,14 @@ nonneg_feature_plot_annotate <- function(acc, feature, max_scale, annotations=NU
   ) + scale_x_continuous(
     minor_breaks = NULL
   ) + scale_y_continuous(
-    breaks = c(-5, 0, 5)
+    breaks = c(-10, -5, 0, 5),
+    minor_breaks = NULL
   ) + theme_bw() + theme(
-    axis.title.y = element_text(margin = margin()),
-    axis.text.y = element_text(margin = margin(t = 5.5, r = 2, b = 5.5))
+    text = element_text(size = 16),
+    axis.title = element_text(size = rel(0.8)),
+    legend.title = element_text(size = rel(0.8)),
+    axis.title.y = element_text(margin = margin(0, -8, 0, 0)),
+    axis.title.x = element_text(margin = margin(0, 0, 0, 0))
   ) + labs(
     x = bquote(UMAP[1]), y = bquote(UMAP[2])
   )
