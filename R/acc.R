@@ -92,7 +92,7 @@ preprocess_acc <- function(counts_file, rownames.acc) {
 
 process_acc_spca <- function(acc, spca) {
   acc <- acc %>%
-    spca_with_centered_umap(spca, seed.use=1, umap_transform=diag(c(1, -1)))
+    spca_with_centered_umap(spca, seed.use=12, umap_transform=diag(c(-1, -1)))
   # Major cell types of interest on the left-hand side instead:
   # acc[['umap.spca']]@cell.embeddings[, 'UMAP_1'] <- (
   #   -acc[['umap.spca']]@cell.embeddings[, 'UMAP_1']
