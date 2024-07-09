@@ -51,7 +51,8 @@ midgut_figures_2 <- list(
     fig.indrop.expl.var.stemlike,
     save_figure(
       paste0("figure/Midgut/ExplVar-", indrop.expl.var.stemlike.inputs, ".pdf"),
-      plot_midgut_expl_var(indrop.expl.var.stats.logumi, indrop.expl.var.stemlike.inputs),
+      plot_midgut_expl_var(indrop.expl.var.stats.logumi, indrop.expl.var.stemlike.inputs)
+      + theme(axis.text = element_text(size = rel(1.5))),
       4,
       1.25
     ),
@@ -63,6 +64,15 @@ midgut_figures_2 <- list(
       "figure/Midgut/ExplVar-ISC-EB.pdf",
       midgut_expl_var_stem_between(indrop),
       3, 3
+    ),
+    packages = c(tar_option_get("packages"), "ggpattern")
+  ),
+  tar_file(
+    fig.indrop.expl.var.stacked.tall,
+    save_figure(
+      "figure/Midgut/ExplVar-ISC-EB-Tall.pdf",
+      midgut_expl_var_stem_between(indrop, legend.position = "bottom"),
+      2.2, 3.5
     ),
     packages = c(tar_option_get("packages"), "ggpattern")
   ),
@@ -150,6 +160,133 @@ midgut_figures_2 <- list(
       ),
       width = 1.25,
       height = 0.5
+    )
+  ),
+  tar_target(
+    indrop.heatmap.genes,
+    c(
+      # "betaTry", "CG30025", "CG12374", "alphaTry", "Bace",
+      # "yip7",
+      # "Amy-p", "Mal-A1",
+      # "gammaTry", "CG30031", "deltaTry", "Jon65Aiv", "Jon65Aiii",
+      # "Hsp23", "IA-2"
+      "gammaTry", "CG30031", "deltaTry", "CG30025",
+      "yip7",
+      "Jon99Ciii", "Jon99Cii", "Jon65Aiv", "Jon65Aiii",
+      "Pebp1",
+      "N",
+      "Hsp23"
+    )
+  ),
+  tar_target(
+    indrop.heatmap.colorscale,
+    tibble(
+      x = seq(-0.25, 1, by=0.05),
+      y = c(seq_gradient_pal("#e0524d", viridis(10)[1])(seq(0, 1, length.out=6))[-6], viridis(21))
+    )
+  ),
+  tar_target(
+    indrop.heatmaps,
+    {
+      Heatmap <- indrop@misc$covar[indrop.heatmap.genes, indrop.heatmap.genes]
+      eigs <- eigen(Heatmap, sym=TRUE)
+      PC1 <- eigs$values[1] * tcrossprod(eigs$vectors[, 1])
+      PC2 <- eigs$values[2] * tcrossprod(eigs$vectors[, 2])
+      eigs_SPC1 <- eigen(
+        diag(c(rep(1, 4), rep(0, 8)))
+        %*%
+        Heatmap
+        %*%
+        diag(c(rep(1, 4), rep(0, 8))),
+        sym=T
+      )
+      SPC1 <- eigs_SPC1$values[1] * tcrossprod(eigs_SPC1$vectors[, 1])
+      eigs_SPC2 <- eigen(
+        diag(c(rep(0, 5), rep(1, 4), rep(0, 3)))
+        %*%
+        Heatmap
+        %*%
+        diag(c(rep(0, 5), rep(1, 4), rep(0, 3)))
+        ,
+        sym=T
+      )
+      SPC2 <- eigs_SPC2$values[1] * tcrossprod(eigs_SPC2$vectors[, 1])
+      list(
+        Heatmap=Heatmap,
+        PC1=matrix(PC1, nrow=nrow(PC1), dimnames=dimnames(Heatmap)),
+        PC2=matrix(PC2, nrow=nrow(PC2), dimnames=dimnames(Heatmap)),
+        SPCA=matrix((SPC1 + SPC2) %>% replace(. == 0, NA), nrow=nrow(SPC1), dimnames=dimnames(Heatmap))
+      ) %>%
+        enframe
+    }
+  ),
+  tar_file(
+    fig.indrop.heatmap,
+    save_figure(
+      str_glue("figure/Midgut/Covar-Heatmap-{indrop.heatmaps$name}.pdf"),
+      melt(indrop.heatmaps$value[[1]]) %>%
+        ggplot(aes(Var1, Var2, fill=value, color=value))
+        + geom_tile()
+        + scale_x_discrete(name=NULL, breaks=NULL)
+        + scale_y_discrete(name=NULL, breaks=NULL, limits=rev)
+        + scale_fill_gradientn(
+          limits=range(indrop.heatmap.colorscale$x)+c(0,1e-10),
+          colors=indrop.heatmap.colorscale$y,
+          na.value="transparent"
+        )
+        + scale_color_gradientn(
+          limits=range(indrop.heatmap.colorscale$x)+c(0,1e-10),
+          colors=indrop.heatmap.colorscale$y,
+          na.value="transparent"
+        )
+        + annotate(
+          "rect",
+          xmin=0.5,
+          xmax=12.5,
+          ymin=0.5,
+          ymax=12.5,
+          color="black",
+          fill="transparent"
+        )
+        + (
+          if (indrop.heatmaps$name == "SPCA")
+            annotate(
+              "rect",
+              # First arg: Outline the SPC1. Second arg: Outline the SPC2.
+              xmin=c(0.5, 5.5),
+              xmax=c(4.5, 9.5),
+              ymin=c(12.5, 7.5),
+              ymax=c(8.5, 3.5),
+              color="black",
+              fill="transparent"
+            )
+        )
+        + coord_cartesian(expand=F)
+        + theme(
+          panel.background = element_rect(fill="transparent"), aspect.ratio = 1,
+          legend.position = "none"
+        ),
+      width=2,
+      height=2
+    ),
+    pattern = map(indrop.heatmaps)
+  ),
+  tar_file(
+    fig.indrop.heatmap.legend,
+    save_figure(
+      "figure/Midgut/Covar-Legend.pdf",
+      get_legend(
+        ggplot(tibble(x=0, y=0, value=0.5), aes(x, y, color=value))
+        + geom_point()
+        + scale_color_gradientn(
+          name = "Loading",
+          limits=range(indrop.heatmap.colorscale$x)+c(0,1e-10),
+          colors=indrop.heatmap.colorscale$y,
+          na.value="transparent"
+        )
+      ),
+      width=0.75,
+      height=1.75
     )
   )
 )
