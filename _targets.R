@@ -702,13 +702,15 @@ list(
     format='file',
     # Git clone and checkout a specific commit hash - never needs to be
     # refreshed
-    cue=tar_cue('never')
+    cue=tar_cue('never'),
+    packages="withr"
   ),
   tar_target(
     OptimalSPCADepot,
     julia_pkg_OptimalSPCADepot(),
     format='file',
-    cue=tar_cue('never')
+    cue=tar_cue('never'),
+    packages=c("basilisk", "withr")
   ),
   tar_target(
     midgut.metafeatures,
