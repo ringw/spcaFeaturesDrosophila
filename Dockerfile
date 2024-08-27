@@ -4,7 +4,7 @@ FROM debian:bookworm
 WORKDIR /root
 COPY _targets.R setupRunSparsePCA.R DESCRIPTION NAMESPACE /root/spcaFeaturesDrosophila/
 COPY R/*.R /root/spcaFeaturesDrosophila/R/
-COPY setupRunSparsePCA.R /root/.Renviron
+COPY setupRunSparsePCA.R /root/.Rprofile
 RUN apt-get update && \
   apt-get install --no-install-recommends -y \
   build-essential \
@@ -28,3 +28,4 @@ RUN apt-get update && \
   cd /root/spcaFeaturesDrosophila && \
   R -e 'source("setupRunSparsePCA.R", ec=T)'
 WORKDIR /root/spcaFeaturesDrosophila
+CMD ["/usr/bin/R"]
