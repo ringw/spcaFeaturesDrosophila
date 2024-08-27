@@ -218,7 +218,20 @@ seurat_spca_from_feature_loadings_nocenter <- function(
 
 # Function on Seurat object. To be released later in an spcaFeatures library.
 RunSparsePCA <- function(seurat, ...) {
-  seurat[['spca']] = seurat_spca(seurat, ...)
+  more_args <- list(...)
+  if (!("matrix_name" %in% names(more_args))) {
+    # User did not create a "covar" matrix so we will create it.
+    scale.data <- seurat[[
+      if (is.character(more_args$assay)) more_args$assay else "RNA"
+    ]]@scale.data
+    if ("nfeatures" %in% names(more_args)) {
+      scale.data <- scale.data[head(VariableFeatures(seurat), more_args$nfeatures), ]
+      more_args <- more_args[names(more_args) != "nfeatures"]
+    }
+    seurat@misc$covar <- tcrossprod(scale.data) / (nrow(scale.data) - 1)
+    more_args <- more_args %>% append(list(matrix_name="covar"))
+  }
+  seurat[['spca']] = do.call(seurat_spca, append(list(seurat), more_args))
   seurat
 }
 
