@@ -357,11 +357,55 @@ midgut_figures = list(
     )
   ),
   tar_target(
-    fig.indrop.deg,
+    fig.indrop.deg.pca,
     save_figure(
-      "figure/Midgut/Indrop-DEG.pdf",
-      plot_arrange_deg_segments(indrop.deg),
-      8, 6,
+      "figure/Midgut/Indrop-DEG-PCA.pdf",
+      plot_arrange_deg_model_color_panels(indrop.deg$pca_clusters, limits=c(-4.5, 4.5))
+      + annotate(
+        "text",
+        -5.05, 13.5,
+        label="A",
+        fontface="bold",
+        size=2
+      )
+      + theme(
+        aspect.ratio = 0.4, legend.position = "none",
+        axis.text = element_text(size = 6),
+        axis.title = element_text(size = 6),
+        axis.title.x = element_text(margin = margin(0, 0, 0, 0)),
+        plot.margin = margin(0, 0, -10, 0)
+      ),
+      4.5, 2.12,
+      device = CairoPDF
+    ),
+    format = "file",
+    packages = tar_option_get("packages") %>% c("Cairo")
+  ),
+  tar_target(
+    fig.indrop.deg.spca,
+    save_figure(
+      "figure/Midgut/Indrop-DEG-SPCA.pdf",
+      plot_arrange_deg_model_color_panels(indrop.deg$spca_clusters, limits=c(-2.6, 2.6))
+      + annotate(
+        "text",
+        -2.92, 13.5,
+        label="B",
+        fontface="bold",
+        size=2
+      )
+      + theme(
+        aspect.ratio = 0.4,
+        axis.text = element_text(size = 6),
+        axis.title = element_text(size = 6),
+        axis.title.x = element_text(margin = margin(0, 0, 0, 0)),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 6),
+        legend.key.size = unit(8, "pt"),
+        plot.margin = margin(0, 0, -5, 0),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.box.margin = margin(-6, -6, -6, -6)
+      ),
+      4.5, 2.36,
       device = CairoPDF
     ),
     format = "file",
