@@ -25,11 +25,10 @@ tiny_violin_plot <- function(seurat, column_to_use, levels_to_use, feature_to_us
     group_by(cluster) %>%
     summarise(embedding = embedding %>% sample(pmin(length(.), 500)))
 
-  rasterise(
+  (
     ggplot(data, aes(cluster, embedding, fill=cluster))
     + geom_violin(linewidth=0.5, scale="width")
-    + geom_jitter(data=jitter_data, shape=16, stroke=NA, size=0.6),
-    dpi = 300
+    + geom_jitter(data=jitter_data, shape=16, stroke=NA, size=0.6)
   ) + theme_cowplot() + scale_fill_manual(
     values = c(midgut.colors, setNames(midgut.colors["EC-like"], "")), guide=guide_none()
   ) + scale_y_continuous(
@@ -39,6 +38,66 @@ tiny_violin_plot <- function(seurat, column_to_use, levels_to_use, feature_to_us
     x = NULL, y = NULL
   ) + theme(
     plot.margin = margin(1, 1, 1, 1), aspect.ratio = 0.618
+  )
+}
+
+tiny_density_plot <- function(seurat, column_to_use, levels_to_use, feature_to_use) {
+  data <- seurat %>%
+    FetchData(c(column_to_use, feature_to_use)) %>%
+    subset(as.character(.[, 1]) %in% levels_to_use)
+  colnames(data) <- c("cluster", "embedding")
+
+  ydensity <- data %>%
+    group_by(cluster) %>%
+    summarise(
+      dens = list(density(embedding))
+    ) %>%
+    group_by(cluster) %>%
+    summarise(
+      x=c(dens[[1]]$x, dens[[1]]$x %>% tail(1), dens[[1]]$x %>% head(1)),
+      y=c(dens[[1]]$y, -Inf, -Inf),
+      .groups="keep"
+    )
+  indicate_mu <- tibble(cluster=character(0), x=numeric(0), y=numeric(0))
+  if (length(levels_to_use) > 1) {
+    indicate_mu <- ydensity %>%
+      summarise(
+        y = approx(
+          x,
+          y,
+          xout=mean(data$embedding[data$cluster == cluster[1]])
+        )$y +
+          # The density at the mean is quite far from the y-limit so we can get
+          # large with this indicator line.
+          max(ydensity$y) * c(-0.08, 0.08),
+        x = mean(data$embedding[data$cluster == cluster[1]])
+      )
+  }
+
+  (
+    ggplot(ydensity, aes(x, y, group=cluster, fill=cluster))
+    + geom_polygon(color="black", linewidth=0.5) +
+    geom_line(aes(), indicate_mu)
+  ) + theme_cowplot() + scale_fill_manual(
+    values = c(midgut.colors, setNames(midgut.colors["EC-like"], "")), guide=guide_none()
+  ) + scale_x_continuous(
+    expand=c(0, 0),
+    labels=NULL
+  ) + scale_y_continuous(
+    breaks=NULL,
+    # Expand the y-axis less since it is a tiny plot
+    limits=c(0, max(ydensity$y) * 1.02),
+    expand=c(0, 0)
+  ) + coord_cartesian(
+    # NEED SPCA to start at 0!
+    if (grepl("SPARSE", feature_to_use))
+      c(0, max(data$embedding))
+    else NULL,
+    NULL
+  ) + labs(
+    x = NULL, y = NULL
+  ) + theme(
+    plot.margin = margin(1, 1, 1, 1), aspect.ratio = 0.5
   )
 }
 

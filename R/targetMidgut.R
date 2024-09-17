@@ -135,10 +135,13 @@ midgut_figures_2 <- list(
       save_figure(
         paste0("figure/Midgut/Feature-Loadings-", feature, suffix_font_size, ".pdf"),
         (
-          spc_tile_plot(indrop.spca.models[[4]], feature, fontsize=font_size)
+          spc_tile_plot(
+            indrop.spca.models[[4]], feature, fontsize=font_size,
+            fontface = c(`4`="bold", `8`="plain")[as.character(font_size)]
+          )
           + guides(fill = guide_none())
         ),
-        width = if (font_size > 4) 1.75 else 1.2,
+        width = if (font_size > 4) 1.6 else 1.2,
         height = 3.2
       ),
       packages = tar_option_get("packages") %>% c("Cairo")
@@ -150,17 +153,77 @@ midgut_figures_2 <- list(
       "figure/Midgut/Feature-Loadings-Thumbnail-Legend.pdf",
       get_legend(
         ggplot(data.frame(x=c(0, 0.5)), aes(x, y=0, color=x))
-        + geom_tile()
-        + scale_color_viridis_c(
-          breaks = c(0, 0.25, 0.5),
-          labels = percent, end = 0.5,
-          guide = guide_colorbar(title = NULL, barwidth = 2.5, barheight = 0.75)
+        + geom_tile() +
+        scale_color_gradientn(
+          limits=c(-0.5, 0.5000001),
+          colors = c(
+            seq_gradient_pal("#e0524d", viridis(10)[1])(
+              seq(0, 1, length.out=50)[-50]
+            ),
+            viridis(101)[1:51]
+          ),
+          guide = guide_colorbar(title = NULL, barwidth = 7, barheight = 0.75),
+          labels = percent
         )
         + theme(legend.position = "bottom")
       ),
-      width = 1.25,
+      width = 1.75,
       height = 0.5
     )
+  ),
+  tar_file(
+    fig.indrop.loadings.pc3,
+    save_figure(
+      "figure/Midgut/Feature-Loadings-PC3-Thumbnail.pdf",
+      (
+        pc_tile_plot(indrop[["pca"]], "PC_3", fontsize=8, fontface="plain", begin=-0.5)
+        + guides(fill = guide_none())
+      ),
+      width = 1.6,
+      height = 3.6
+    ),
+    packages = tar_option_get("packages") %>% c("Cairo")
+  ),
+  tar_file(
+    fig.indrop.loadings.pc7,
+    save_figure(
+      "figure/Midgut/Feature-Loadings-PC7-Thumbnail.pdf",
+      (
+        pc_tile_plot(indrop[["pca"]], "PC_7", fontsize=8, fontface="plain", begin=-0.5)
+        + guides(fill = guide_none())
+      ),
+      width = 1.6,
+      height = 3.6
+    ),
+    packages = tar_option_get("packages") %>% c("Cairo")
+  ),
+  tar_target(
+    fig.indrop.thumbnail.density.pc3,
+    save_figure(
+      "figure/Midgut/Indrop-Thumbnail-Density-Schematic-PC3.pdf",
+      tiny_density_plot(
+        indrop,
+        "pca_classif",
+        "EC",
+        "PC_3"
+      ),
+      width=3, height=1.5
+    ),
+    format = "file"
+  ),
+  tar_target(
+    fig.indrop.thumbnail.density.spc26,
+    save_figure(
+      "figure/Midgut/Indrop-Thumbnail-Density-Schematic-SPC26.pdf",
+      tiny_density_plot(
+        indrop,
+        "spca_classif",
+        c("ISC", "EB"),
+        "SPARSE_26"
+      ),
+      width=3, height=1.5
+    ),
+    format = "file"
   ),
   tar_target(
     indrop.heatmap.genes,
