@@ -265,9 +265,10 @@ midgut_figures = list(
       plot_midgut_feature_legend(
         indrop, limits=c(0,4.5),
         legend.direction="vertical",
-        legend.name=NULL
+        legend.name=NULL,
+        guide=guide_colorbar(barwidth=0.5)
       ),
-      width = 0.5, height = 1.5
+      width = 0.3, height = 1.5
     )
   ),
   tar_file(
