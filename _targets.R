@@ -451,19 +451,6 @@ acc_mutually_exclusive$name <- acc_mutually_exclusive %>% with(
   paste(str_replace(feature1, "\\+", ""), str_replace(feature2, "\\+", ""), sep="_")
 )
 
-acc_feature_loadings = bind_rows(
-  acc_mutually_exclusive %>%
-    subset(select=c(feature1, feature2)) %>%
-    apply(2, \(v) v %>% grep("^SPARSE_", ., val=T) %>% data.frame(feature = .), simplify = FALSE) %>%
-    setNames(c("magma", "viridis")),
-  .id = "viridis_option"
-) %>% within(viridis_option <- as.character(viridis_option))
-acc_feature_loadings = bind_rows(
-  acc_mutually_exclusive %>%
-    subset(select=c(feature1, feature2)) %>%
-    apply(2, \(v) v %>% grep("^SPARSE_", ., val=T) %>% data.frame(feature = .), simplify = FALSE)
-) %>% within(viridis_option <- "viridis")
-
 # New features: Plot a single feature, use the bounding box of ACC and CAF
 acc_features <- tribble(
   ~feature, ~max_scale, ~annotations,
@@ -576,26 +563,50 @@ acc_figures = list(
     )
   ),
   tar_map(
-    acc_feature_loadings,
-    names = feature,
-    tar_target(
+    tibble(feature = c("SPARSE_11", "SPARSE_14", "SPARSE_29")) %>%
+      full_join(
+        tribble(~font_size, ~suffix_font_size, 4, "", 8, "-Thumbnail"),
+        character(0)
+      ),
+    names = feature | font_size,
+    tar_file(
       fig.acc.loadings,
       save_figure(
-        paste0("figure/ACC/ACC-Feature-Loadings-", feature, ".pdf"),
+        paste0("figure/ACC/Feature-Loadings-", feature, suffix_font_size, ".pdf"),
         (
-          spc_tile_plot(
-            acc.spca.dimreduc, feature, option=viridis_option, end=0.5,
-            fontface = "plain"
-          )
-          + theme(legend.position = "bottom", legend.margin = margin(r = 5))
-          + guides(
-            fill = guide_colorbar(barwidth = 3, barheight = 0.75, title = "")
-          )
+          spc_tile_plot(acc.spca.dimreduc, feature, fontsize=font_size, begin=-0.5)
+          + guides(fill = guide_none())
         ),
-        width = 0.9,
-        height = 3.5
+        width = if (font_size > 4) 1.75 else 1.2,
+        height = 4
       ),
-      format = "file"
+      packages = tar_option_get("packages") %>% c("Cairo")
+    )
+  ),
+  tar_file(
+    fig.acc.loadings.thumbnail.legend,
+    save_figure(
+      "figure/ACC/ACC-Feature-Loadings-Thumbnail-Legend.pdf",
+      get_legend(
+        ggplot(data.frame(x=c(0, 0.5)), aes(x, y=0, color=x))
+        + geom_tile()
+        + scale_color_gradientn(
+          colors=c(
+            seq_gradient_pal("#e0524d", viridis(10)[1])(
+              seq(0, 1, length.out=25)[-25]
+            ),
+            viridis(101)[1:51]
+          ),
+          limits=c(-0.5, 0.5),
+          labels = percent,
+          guide = guide_colorbar(title = NULL, barwidth = 0.5, barheight = 6, label.position="left")
+        )
+        + theme(
+          legend.text = element_text(margin = margin(0, -3, 0, 0))
+        )
+      ),
+      width = 0.55,
+      height = 1.5
     )
   ),
   tar_map(
@@ -672,13 +683,18 @@ acc_figures = list(
       (
         ggplot(data.frame(x=0, y=0, color=c(0, 8)), aes(x, y, color=color))
           + geom_point()
-          + scale_color_gradientn(
-            colors = acc_nonneg_feature_plot_gradient
+          + scale_color_viridis_c(
+            name=NULL,
+            option = "magma",
+            limits = c(0,8),
+            guide=guide_colorbar(barwidth=0.5, barheight=6, label.position="left")
+          ) +
+          theme(
+            legend.text = element_text(margin = margin(0, -3, 0, 0))
           )
-          + labs(color = "LogNormalize")
       ) %>% get_legend,
-      width = 1,
-      height = 2
+      width = 0.25,
+      height = 1.5
     )
   ),
   tar_target(
