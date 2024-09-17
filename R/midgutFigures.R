@@ -1,13 +1,13 @@
 midgut.colors = c(
-  'ISC'=hsv(0.88, 0.75, 0.97),
-  'EB'=hsv(0.166, 1, 0.93),
-  'dEC'=hcl(137, 57, 71),
-  'EC'=hcl(253, 74, 48),
-  'EC-like'=hcl(230, 34, 72),
-  'EE'=hcl(300, 72, 46),
-  'copper/iron'="#ae786e",
-  'LFC'=hcl(180, 38, 88),
-  'cardia'="#891616",
+  'ISC'="#FAD11B", # hcl(68, 95, 85)
+  'EB'="#FF7349", # hcl(21, 120, 65)
+  'dEC'="#FF82BA", # hcl(345, 80, 70)
+  'EC'="#34CDC7", # hcl(187, 55, 75)
+  'EC-like'="#A0E6EC", # hcl(10, 48, 74)
+  'EE'="#BCA6FF", # hcl(274, 71, 73)
+  'copper/iron'="#c58b81",
+  'LFC'="#48F183", # hcl(136, 95, 85)
+  'cardia'="#891416", # hcl(12, 84, 29)
   'bg'=hcl(c = 0, l = 87)
 )
 midgut.col = as.list(midgut.colors)
