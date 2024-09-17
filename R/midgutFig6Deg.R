@@ -16,6 +16,31 @@ display_deg_data <- function(deg_data, min_num_expressed = 25) {
     mutate(q_val = p.adjust(p_val, "BH"))
 }
 
+display_pca_spca_deg_data <- function(deg_data, ...) {
+  pca <- display_deg_data(deg_data$pca_clusters)
+  spca <- display_deg_data(deg_data$spca_clusters)
+  tbl <- full_join(
+    summarise(
+      pca, rowname, nExpressed_ISCEB_PCA = total_num_expressed, Mu_ISC_PCA = baseMean,
+      `L2FC95-PCA`=log2FoldChange - qnorm(0.975) * lfcSE,
+      L2FC_PCA=log2FoldChange,
+      `L2FC95+PCA`=log2FoldChange + qnorm(0.975) * lfcSE,
+      FDR_PCA=q_val,
+    ),
+    summarise(
+      spca, rowname, nExpressed_ISCEB_SPCA = total_num_expressed,
+      Mu_ISC_SPCA = baseMean,
+      `L2FC95-SPCA`=log2FoldChange - qnorm(0.975) * lfcSE,
+      L2FC_SPCA=log2FoldChange,
+      `L2FC95+SPCA`=log2FoldChange + qnorm(0.975) * lfcSE,
+      FDR_SPCA=q_val,
+    ),
+    "rowname"
+  )
+  tbl[(tbl$FDR_PCA >= 0.05) %>% replace(is.na(.), FALSE), 3:7] <- NA
+  tbl[(tbl$FDR_SPCA >= 0.05) %>% replace(is.na(.), FALSE), 9:13] <- NA
+}
+
 plot_arrange_deg_segments <- function(deg_models) {
   results <- deg_models %>% sapply(display_deg_data, simplify=FALSE)
   panels <- full_join(
