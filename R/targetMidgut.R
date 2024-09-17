@@ -1,5 +1,16 @@
 midgut_figures_2 <- list(
   tar_target(
+    fig.indrop.umap,
+    save_figure(
+      "figure/Midgut/Fig2-Features.pdf",
+      plot_indrop_fig2(indrop),
+      6,
+      4.75
+    ),
+    format = "file",
+    packages = tar_option_get("packages") %>% c("egg")
+  ),
+  tar_target(
     fig.indrop.violin.features,
     save_figure(
       "figure/Midgut/Fig3-Violin.pdf",

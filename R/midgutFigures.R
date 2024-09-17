@@ -23,26 +23,26 @@ midgut.model.colors.legend = c(PCA=hcl(30, 12, 95), SPCA=hcl(129,11,95))
 
 plot_indrop_pca_annotations <- tribble(
   ~UMAP_1, ~UMAP_2, ~label,
-  -10.5, 2.45, "aEC",
+  -10.95, 2.45, "aEC",
   -0.5, -8.25, "aEC",
   9.5, 7.25, "mEC",
   #Gs2+
-  -4.75, 0.4, "pEC",
+  -4.35, 0, "pEC",
   # Above/left: LManVI+. Below: Mur29B+
-  6.75, 0.25, "pEC"
+  7.5, 0.6, "pEC"
 )
 
-plot_indrop_pca <- function(indrop) (
+plot_indrop_pca <- function(indrop, dpi=300, text_size=6.5) (
   indrop@meta.data %>% cbind(as.data.frame(indrop[['umap']]@cell.embeddings)) %>%
   arrange(pca_classif != 'unknown') %>%
   ggplot(aes(UMAP_1,UMAP_2, color=pca_classif))
-  + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
+  + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=dpi)
   + theme_bw()
   + scale_color_manual(values=setNames(midgut.colors,NULL), guide=guide_legend(override.aes=list(size=3)))
   + scale_x_continuous(limits=c(-13,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + scale_y_continuous(limits=c(-9.22658,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
-    aes(label=label), data=plot_indrop_pca_annotations, color="black", size=6.5
+    aes(label=label), data=plot_indrop_pca_annotations, color="black", size=text_size
   )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
@@ -61,26 +61,26 @@ plot_indrop_pca <- function(indrop) (
 
 plot_indrop_spca_annotations <- tribble(
   ~umapspca_1, ~umapspca_2, ~label,
-  -1.3, -6.75, "aEC",
+  -2, -6.75, "aEC",
   # Amy-p+ cells
-  -1.7, 7.3, "aEC",
-  5.75, 6.25, "mEC",
-  1, 6, "pEC",
-  7, 1.5, "pEC"
+  -1.7, 7.8, "aEC",
+  6.5, 6.5, "mEC",
+  1.5, 6.35, "pEC",
+  6.75, 1.75, "pEC"
 )
 
-plot_indrop_spca <- function(indrop) (
+plot_indrop_spca <- function(indrop, dpi=300, text_size=6.5) (
   indrop@meta.data %>%
     cbind(as.data.frame(indrop[['umap.spca']]@cell.embeddings)) %>%
     arrange(pca_classif != 'unknown') %>%
     ggplot(aes(umapspca_1,umapspca_2, color=spca_classif))
-  + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
+  + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=dpi)
   + theme_bw()
   + scale_color_manual(values=setNames(midgut.colors,NULL), guide=guide_legend(override.aes=list(size=3)))
   + scale_x_continuous(expand=rep(0.02,2), breaks=pretty_breaks(4))
   + scale_y_continuous(limits=c(-7.547306,NA), expand=rep(0.02,2), breaks=pretty_breaks(4))
   + geom_text(
-    aes(label=label), data=plot_indrop_spca_annotations, color="black", size=6.5
+    aes(label=label), data=plot_indrop_spca_annotations, color="black", size=text_size
   )
   + labs(x=bquote("UMAP"[1]), y=bquote("UMAP"[2]))
   + theme(
@@ -106,7 +106,7 @@ plot_midgut_legend <- function(indrop) get_legend(
   + labs(color=NULL)
 )
 
-plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name, limits=NULL) (
+plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name, limits=NULL, dpi=300, pt.size=0.25) (
   indrop[[embedding]]@cell.embeddings %*%
     matrix(diag(2), nrow=2, dimnames=list(NULL, c("UMAP_1", "UMAP_2"))) %>%
     as.data.frame %>%
@@ -122,7 +122,7 @@ plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name, limit
         )
     ) %>%
   ggplot(aes(UMAP_1, UMAP_2, color=feature))
-  + rasterise(geom_point(shape=20, size=1e-3, show.legend = F), dpi=300)
+  + rasterise(geom_point(stroke=NA, size=pt.size, show.legend = F), dpi=dpi)
   + theme_bw()
   + scale_x_continuous(
     limits = \(ll) c(pmax(ll[1], -13), ll[2]),
@@ -150,12 +150,13 @@ plot_midgut_feature <- function(indrop, bg_color, embedding, feature_name, limit
   )
 )
 
-plot_midgut_feature_legend <- function(indrop, feature_name="betaTry", limits=NULL, legend.direction="horizontal", legend.name="LogNormalize") get_legend(
-  plot_midgut_feature(indrop, "PCA", "umap", feature_name, limits)
-    + geom_point()
-    + labs(color=legend.name)
-    + theme_bw()
-    + theme(legend.direction = legend.direction)
+plot_midgut_feature_legend <- function(indrop, feature_name="betaTry", limits=NULL, legend.direction="horizontal", legend.name="LogNormalize", guide=NULL) get_legend(
+  plot_midgut_feature(indrop, "PCA", "umap", feature_name, limits) +
+    geom_point() +
+    guides(color = guide) +
+    labs(color=legend.name) +
+    theme_bw() +
+    theme(legend.direction = legend.direction)
 )
 
 plot_midgut_model_background_legend <- function() get_legend(
@@ -215,5 +216,177 @@ midgut_dot_plot <- function(cpm_data, pct_data, bg_color=waiver()) {
     legend.margin = margin(t = 20)
   ) + labs(
     x = NULL, y = NULL, size = "% Expressed"
+  )
+}
+
+# Fig2 gtable plot. Needs to show the PCA-UMAP and SPCA-UMAP clusters,
+# annotations, then plots of the E(spl)mb and SPC26 features annotated with
+# inset box, then the inset panels.
+plot_indrop_fig2 <- function(
+  indrop
+) {
+  pt <- \(x) x * 25.4 / 72
+  main_width <- unit(1.6, "in")
+  main_height <- unit(1.2, "in")
+  inset_width <- unit(1, "in")
+  inset_height <- unit(0.75, "in")
+  axis_theme <- theme(
+    axis.text = element_text(size = unit(8, "pt")),
+    axis.text.x = element_text(margin = margin(t = 0, b = 1)),
+    axis.title = element_text(size = unit(8, "pt")),
+    axis.title.x = element_text(margin = margin(1, 0, 0, 0)),
+    axis.title.y = element_text(margin = margin(0, -4, 0, 0)),
+    panel.border = element_rect(fill = NA, size = unit(0.25, "pt")),
+    plot.margin = margin(t = 1, r = 5.5, b = 5, l = 5.5)
+  )
+  inset_theme <- axis_theme +
+    theme(
+      axis.title.y = element_text(margin = margin()),
+      plot.margin = margin(t = -5, r = 1, b = 5, l = 1)
+    )
+  blank_ggplot <- (
+    ggplot() +
+      axis_theme +
+      theme(panel.background = element_blank(), panel.border = element_blank())
+  ) %>%
+    set_panel_size(w = main_width, h = main_height)
+  panel_limits <- list(
+    pca = list(x = c(-13.35423, 12.19315), y = c(14.306092, -9.707613)),
+    spca = list(x = c(-10.29552, 8.25750), y = c(13.074905, -7.551983))
+  )
+  annotate_label <- sapply(
+    c("E(spl)mbeta-HLH", "SPC26"),
+    \(n) sapply(
+      panel_limits,
+      \(limits) annotate(
+        "text",
+        limits$x[1] + 0.02 * diff(limits$x),
+        limits$y[1] + 0.07 * diff(limits$y),
+        label = n,
+        hjust = 0,
+        size = pt(8)
+      )
+    ),
+    simplify = FALSE
+  )
+  make_inset <- \(gr) {
+    container <- blank_ggplot
+    container$grobs[[
+      match("panel", container$layout$name)
+    ]] <- gr
+    container <- container
+  }
+  main_grid <- rbind(
+    cbind(
+      plot_indrop_pca(indrop, 1200, pt(8)) %>%
+        `+`(axis_theme) %>%
+        set_panel_size(w = main_width, h = main_height),
+      plot_indrop_spca(indrop, 1200, pt(8)) %>%
+        `+`(axis_theme) %>%
+        set_panel_size(w = main_width, h = main_height),
+      blank_ggplot
+    ),
+    cbind(
+      plot_midgut_feature(
+        indrop,
+        bg_color="PCA",
+        "umap",
+        "E(spl)mbeta-HLH",
+        limits=c(0, 4.5)
+      ) %>%
+        `+`(
+          annotate(
+            "rect", xmin=-3.8, ymin=7.7, xmax=-0.2, ymax=2.5, fill="transparent", color="black", linewidth=0.5
+          )
+        ) %>%
+        `+`(annotate_label$`E(spl)mbeta-HLH`$pca) %>%
+        `+`(axis_theme) %>%
+        `+`(
+          theme(
+            plot.margin = axis_theme$plot.margin + margin(t = 5)
+          )
+        ) %>%
+        set_panel_size(w = main_width, h = main_height),
+      plot_midgut_feature(
+        indrop,
+        bg_color="SPCA",
+        "umap.spca",
+        "E(spl)mbeta-HLH",
+        limits=c(0, 4.5)
+      ) %>%
+        `+`(
+          annotate(
+            "rect",xmin=-6.5, ymin=4.9, xmax=-2.5, ymax=2.3, fill="transparent", color="black", linewidth=0.5
+          )
+        ) %>%
+        `+`(annotate_label$`E(spl)mbeta-HLH`$spca) %>%
+        `+`(axis_theme) %>%
+        set_panel_size(w = main_width, h = main_height),
+      plot_midgut_feature(
+        indrop,
+        bg_color="SPCA",
+        "umap.spca",
+        "SPARSE_26",
+        limits=c(0, 4.5)
+      ) %>%
+        `+`(
+          annotate(
+            "rect",xmin=-6.5, ymin=4.9, xmax=-2.5, ymax=2.3, fill="transparent", color="black", linewidth=0.5
+          )
+        ) %>%
+        `+`(annotate_label$SPC26$spca) %>%
+        `+`(axis_theme) %>%
+        set_panel_size(w = main_width, h = main_height)
+    ),
+    cbind(
+      plot_midgut_feature(
+        indrop,
+        bg_color="PCA",
+        "umap",
+        "E(spl)mbeta-HLH",
+        limits=c(0, 4.5),
+        pt.size = 0.5
+      ) %>%
+        `+`(
+          coord_cartesian(c(-3.8, -0.2), c(2.5, 7.7), expand=F)
+        ) %>%
+        `+`(inset_theme) %>%
+        set_panel_size(w = inset_width, h = inset_height) %>%
+        make_inset(),
+      plot_midgut_feature(
+        indrop,
+        bg_color="SPCA",
+        "umap.spca",
+        "E(spl)mbeta-HLH",
+        limits=c(0, 4.5),
+        pt.size = 0.5
+      ) %>%
+        `+`(
+          coord_cartesian(c(-6.5, -2.5), c(2.3, 4.9), expand=F)
+        ) %>%
+        `+`(
+          scale_y_continuous(breaks = c(3, 4))
+        ) %>%
+        `+`(inset_theme) %>%
+        set_panel_size(w = inset_width, h = inset_height) %>%
+        make_inset(),
+      plot_midgut_feature(
+        indrop,
+        bg_color="SPCA",
+        "umap.spca",
+        "SPARSE_26",
+        limits=c(0, 4.5),
+        pt.size = 0.5
+      ) %>%
+        `+`(
+          coord_cartesian(c(-6.5, -2.5), c(2.3, 4.9), expand=F)
+        ) %>%
+        `+`(
+          scale_y_continuous(breaks = c(3, 4))
+        ) %>%
+        `+`(inset_theme) %>%
+        set_panel_size(w = inset_width, h = inset_height) %>%
+        make_inset()
+    )
   )
 }
