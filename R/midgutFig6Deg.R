@@ -16,7 +16,7 @@ display_deg_data <- function(deg_data, min_num_expressed = 25) {
     mutate(q_val = p.adjust(p_val, "BH"))
 }
 
-display_pca_spca_deg_data <- function(deg_data, ...) {
+display_pca_spca_deg_data <- function(deg_data, midgut.metafeatures, ...) {
   pca <- display_deg_data(deg_data$pca_clusters)
   spca <- display_deg_data(deg_data$spca_clusters)
   tbl <- full_join(
@@ -37,8 +37,30 @@ display_pca_spca_deg_data <- function(deg_data, ...) {
     ),
     "rowname"
   )
+  tbl <- tibble(
+    symbol_r6.27 = pull(tbl, 1),
+    flybase_r6.27 = midgut.metafeatures[pull(tbl, 1), "gene_id"],
+    tbl[-1]
+  )
   tbl[(tbl$FDR_PCA >= 0.05) %>% replace(is.na(.), FALSE), 3:7] <- NA
   tbl[(tbl$FDR_SPCA >= 0.05) %>% replace(is.na(.), FALSE), 9:13] <- NA
+  tbl[
+    (tbl[3:7] %>% as.matrix %>% is.na %>% `!`() %>% rowAlls) |
+      (tbl[9:13] %>% as.matrix %>% is.na %>% `!`() %>% rowAlls),
+  ] %>%
+    arrange(
+      ifelse(
+        (sign(`L2FC95-SPCA`) == sign(`L2FC95+SPCA`)) %>%
+          replace(is.na(.), 0),
+        pmin(abs(`L2FC95-SPCA`), abs(`L2FC95+SPCA`)) * sign(L2FC_SPCA),
+        0
+      ),
+      ifelse(
+        sign(`L2FC95-PCA`) == sign(`L2FC95+PCA`),
+        pmin(abs(`L2FC95-PCA`), abs(`L2FC95+PCA`)) * sign(L2FC_PCA),
+        0
+      )
+    )
 }
 
 plot_arrange_deg_segments <- function(deg_models) {
