@@ -236,8 +236,7 @@ midgut_expl_var_stem_between <- function(
       fill='transparent'
     )
     + theme(
-      legend.position = legend.position,
-      plot.margin = list(right = NULL, bottom = margin(5.5, 10, 44, 100))[[legend.position]]
+      legend.position = legend.position
     )
     ,
     stem.graph

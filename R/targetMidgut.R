@@ -78,15 +78,6 @@ midgut_figures_2 <- list(
     ),
     packages = c(tar_option_get("packages"), "ggpattern")
   ),
-  tar_file(
-    fig.indrop.expl.var.stacked.tall,
-    save_figure(
-      "figure/Midgut/ExplVar-ISC-EB-Tall.pdf",
-      midgut_expl_var_stem_between(indrop, legend.position = "bottom"),
-      2.2, 3.5
-    ),
-    packages = c(tar_option_get("packages"), "ggpattern")
-  ),
 
   tar_target(
     indrop.spca.dimreduc.sklearn,
