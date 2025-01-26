@@ -760,7 +760,17 @@ list(
     'https://ftp.flybase.org/releases/FB2019_02/precomputed_files/genes/fbgn_annotation_ID_fb_2019_02.tsv.gz',
     'fbgn_annotation_ID_2019_02.tsv.gz',
     cue=tar_cue('never')
-
+  ),
+  tar_download(
+    midgut.gene.association,
+    'https://ftp.flybase.org/releases/FB2019_02/precomputed_files/go/gene_association.fb.gz',
+    'go-gene_association.fb.gz',
+    cue=tar_cue('never')
+  ),
+  tar_file(
+    midgut.gene.flybase.biological_process,
+    'go-basic_parsed_biological_pathway.tsv',
+    cue=tar_cue('never')
   ),
   tar_target(
     OptimalSPCA,
