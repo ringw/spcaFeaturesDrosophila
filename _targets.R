@@ -417,9 +417,14 @@ midgut_figures = list(
     save_figure(
       "figure/Midgut/DEG-Legend.pdf",
       cowplot::get_legend(
-        plot_midgut_de_panel(
-          tibble(
-            rowname="a", displayName="a", log2FoldChange=2, lfcSE=1, q_val=1
+        plot_arrange_deg_model_color_panels(
+          list(
+            rowname="a",
+            map=matrix(1, nrow=1, ncol=2, dimnames=list("a", NULL)),
+            sd=matrix(1, nrow=1, ncol=2, dimnames=list("a", NULL)),
+            mle.test=data.frame(pval=1, adj_pval=1),
+            total_num_expressed=10,
+            p_val=1
           )
         )
         + guides(color = guide_legend(nrow = 2))
