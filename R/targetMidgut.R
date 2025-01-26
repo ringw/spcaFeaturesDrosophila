@@ -82,6 +82,10 @@ midgut_figures_2 <- list(
     ),
     packages = c(tar_option_get("packages"), "ggpattern")
   ),
+  tar_target(
+    indrop.explained.variance.violin.data,
+    analyze_explained_variance(indrop, indrop.sct.pca)
+  ),
   tar_file(
     fig.indrop.logumi,
     save_figure(

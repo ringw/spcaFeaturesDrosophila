@@ -90,6 +90,56 @@ plot_pctMito_celltypes <- function(indrop) {
   )
 }
 
+analyze_explained_variance <- function(indrop, indrop.sct.pca) {
+  var <- tibble(
+    x = c("LN PCA", "SCT PCA", "LN SPCA") %>% factor(., .),
+    reduc = list(indrop[["pca"]], indrop.sct.pca, indrop[["spca"]]),
+  ) %>%
+    full_join(
+      tibble(
+        facet = c("logUMI", "pctMito", "pctRibo", "subclassif"),
+        feature = list(
+          rep(list(indrop$lognUMI), 3),
+          rep(list(indrop$pctMito), 3),
+          rep(list(indrop$pctRibo), 3),
+          list(
+            indrop$pca_subclassif,
+            indrop$sct_subclassif,
+            indrop$spca_subclassif
+          )
+        )
+      ),
+      by = character(0)
+    ) %>%
+    full_join(tibble(dim = 1:36), by = character(0)) %>%
+    rowwise() %>%
+    summarise(
+      x,
+      facet,
+      dim,
+      {
+        M <- feature[[x]]
+        Y <- reduc@cell.embeddings[, dim]
+        model <- lm(Y ~ M)
+        square <- \(x) x^2
+        tibble(
+          explained = model$effects[
+            grep("^M", names(model$effects))
+          ] %>%
+            square() %>%
+            sum(),
+          unexplained = model$effects[
+            1 + grep("^M", names(model$effects)[-1], invert=TRUE)
+          ] %>%
+            square() %>%
+            sum(),
+          total = sum(scale(Y, scale=F)^2),
+          R2 = explained / (explained + unexplained),
+        )
+      }
+    )
+}
+
 plot_logumi_corr <- function(indrop, indrop.sct.pca, var.test) {
   logUMI <- log(indrop$nUMI) / log(10)
   pctMito <- indrop$pctMito
