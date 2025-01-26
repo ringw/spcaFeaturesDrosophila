@@ -55,6 +55,10 @@ midgut_figures_2 <- list(
     midgut_expl_var_stem_like(indrop, indrop.sct.pca)
   ),
   tar_target(
+    indrop.expl.var.stats.pctMito,
+    midgut_expl_var_stem_like(indrop, indrop.sct.pca, indrop$pctMito)
+  ),
+  tar_target(
     indrop.expl.var.stemlike.inputs,
     c("pca", "spca2pca", "pca.sct")
   ),
@@ -77,6 +81,70 @@ midgut_figures_2 <- list(
       3, 3
     ),
     packages = c(tar_option_get("packages"), "ggpattern")
+  ),
+  tar_file(
+    fig.indrop.logumi,
+    save_figure(
+      "figure/Midgut/Fig-logUMI.pdf",
+      {
+        gtable <- cbind(
+          set_panel_size(
+            plot_logumi_corr(indrop, indrop.sct.pca, "logUMI") +
+              theme(plot.margin = margin(5.5, 25, 5.5, 5.5)),
+            w = unit(1, "in"),
+            h = unit(1.5, "in")
+          ),
+          plot_logumi_bar(indrop.expl.var.stats.logumi)
+        )
+        gtable$heights[8] <- unit(30, "pt")
+        gtable <- gtable(
+          w = unit(1, "null"),
+          h = unit(c(2.5, 1.5), "in")
+        ) %>%
+          gtable_add_grob(
+            list(
+              gtable,
+              plot_logumi_celltypes(indrop)
+            ),
+            t = 1:2,
+            l = 1
+          )
+      },
+      6.5, 4
+    ),
+    packages = tar_option_get("packages") %>% c("egg", "gtable")
+  ),
+  tar_file(
+    fig.indrop.pctmito,
+    save_figure(
+      "figure/Midgut/Fig-pctMito.pdf",
+      {
+        gtable <- cbind(
+          set_panel_size(
+            plot_logumi_corr(indrop, indrop.sct.pca, "pctMito") +
+              theme(plot.margin = margin(5.5, 25, 5.5, 5.5)),
+            w = unit(1, "in"),
+            h = unit(1.5, "in")
+          ),
+          plot_logumi_bar(indrop.expl.var.stats.pctMito)
+        )
+        gtable$heights[8] <- unit(30, "pt")
+        gtable <- gtable(
+          w = unit(1, "null"),
+          h = unit(c(2.5, 1.5), "in")
+        ) %>%
+          gtable_add_grob(
+            list(
+              gtable,
+              plot_pctMito_celltypes(indrop)
+            ),
+            t = 1:2,
+            l = 1
+          )
+      },
+      6.5, 4
+    ),
+    packages = tar_option_get("packages") %>% c("egg", "gtable")
   ),
 
   tar_target(

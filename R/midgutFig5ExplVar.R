@@ -1,3 +1,192 @@
+simple_violin_plot <- function(data, size=0.6, ...) {
+  colnames(data) <- c("cluster", "embedding", "weight")
+  data$cols <- "black"
+  data$cols[c(1:9, 37:45)] <- "#990000"
+  data <- data %>% arrange(desc(cols))
+  (
+    ggplot(data, aes(cluster, embedding, fill=cluster))
+    + geom_violin(aes(weight=weight), linewidth=0.5, ...)
+    + geom_jitter(aes(color=cols), shape=16, stroke=NA, size=size) +
+    scale_color_identity()
+  ) + theme_cowplot() + scale_fill_hue() +
+    scale_y_continuous(
+      expand = c(0, 0)
+    ) + labs(
+      x = NULL, y = NULL
+    ) + theme(
+      plot.margin = margin(1, 1, 1, 1), aspect.ratio = 1
+    )
+}
+
+plot_logumi_celltypes <- function(indrop) {
+  red_names <- c(
+    pca_classif = "LN PCA",
+    sct_classif = "SCT PCA",
+    spca_classif = "LN SPCA"
+  )
+  indrop$logUMI <- log(indrop$nUMI) / log(10)
+  gg <- sapply(
+    names(red_names),
+    \(n) tiny_violin_plot(
+      indrop,
+      n,
+      c("EB", "ISC", "EC", "EC-like", "EE"),
+      "logUMI",
+      pt.size = 0.1
+    ) +
+      geom_boxplot(outlier.shape = NA, fill = "transparent") +
+      scale_x_discrete(
+        red_names[n]
+      ) +
+      scale_y_continuous(
+        bquote(log[10]*"(nUMI)"), breaks = seq(2.5, 4.5, by = 0.5),
+        labels = c("", "3", "", "4", "")
+      ),
+    simplify=FALSE
+  )
+  gg[[2]] <- gg[[2]] + scale_y_continuous(NULL, labels=NULL)
+  gg[[3]] <- gg[[3]] + scale_y_continuous(NULL, labels=NULL)
+  do.call(
+    cbind,
+    sapply(
+      gg,
+      \(g) g %>% set_panel_size(w = unit(1.5, "in"), h = unit(0.75, "in"))
+    )
+  )
+}
+
+plot_pctMito_celltypes <- function(indrop) {
+  red_names <- c(
+    pca_classif = "LN PCA",
+    sct_classif = "SCT PCA",
+    spca_classif = "LN SPCA"
+  )
+  gg <- sapply(
+    names(red_names),
+    \(n) tiny_violin_plot(
+      indrop,
+      n,
+      c("EB", "ISC", "EC", "EC-like", "EE"),
+      "pctMito",
+      pt.size = 0.1
+    ) +
+      geom_boxplot(outlier.shape = NA, fill = "transparent") +
+      scale_x_discrete(
+        red_names[n]
+      ) +
+      scale_y_continuous(
+        "Mito Fraction", labels=\(v) percent(v/100)
+      ),
+    simplify=FALSE
+  )
+  gg[[2]] <- gg[[2]] + scale_y_continuous(NULL, labels=NULL)
+  gg[[3]] <- gg[[3]] + scale_y_continuous(NULL, labels=NULL)
+  do.call(
+    cbind,
+    sapply(
+      gg,
+      \(g) g %>% set_panel_size(w = unit(1.5, "in"), h = unit(0.75, "in"))
+    )
+  )
+}
+
+plot_logumi_corr <- function(indrop, indrop.sct.pca, var.test) {
+  logUMI <- log(indrop$nUMI) / log(10)
+  pctMito <- indrop$pctMito
+  pca.var <- indrop[["pca"]]@stdev^2
+  sct.var <- indrop.sct.pca@stdev^2
+  spca.var <- indrop[["spca"]]@stdev^2
+  npca <- 36
+  nspca <- 36
+  ylim <- c(0, 0.2)
+  rbind(
+    tibble(x="LN PCA", v=as.numeric(cor(FetchData(indrop, str_glue("PC_{1:npca}")), get(var.test)))^2, w=head(pca.var, npca)),
+    tibble(x="SCT PCA", v=as.numeric(cor(indrop.sct.pca@cell.embeddings[, 1:npca], get(var.test)))^2, w=head(sct.var, npca)),
+    tibble(x="LN SPCA", v=as.numeric(cor(FetchData(indrop, str_glue("SPARSE_{1:nspca}")), get(var.test)))^2, w=head(spca.var, nspca))
+  ) %>%
+    mutate(
+      x = x %>% factor(unique(.))
+    ) %>%
+    simple_violin_plot(size = 2, bw = 0.02) +
+    scale_y_continuous(limits = ylim, expand = c(0, 0)) +
+    coord_cartesian(clip = "off") +
+    # scale_y_continuous(trans="sqrt") +
+    scale_fill_hue(h = c(270, 450) + 15) +
+    labs(y = bquote(R^2)) +
+    theme(
+      axis.text = element_text(size = unit(10, "pt")),
+      axis.text.x = element_text(angle = 45, hjust = 0.8),
+      axis.title = element_text(size = unit(12, "pt")),
+      legend.position = "none"
+    )
+}
+
+plot_logumi_bar <- function(indrop.expl.var.stats.logumi) {
+  red_names <- c(
+    pca="LN PCA",
+    pca.sct="SCT PCA",
+    spca2pca="LN SPCA"
+  )
+  indrop.expl.var.stats.logumi <- indrop.expl.var.stats.logumi %>%
+    subset(
+      ident %in% c("stem-like", "EC", "EE") &
+        reduction %in% names(red_names)
+    )
+  # ylim <- c(0, 1.02 * max(indrop.expl.var.stats.logumi$pct.expl))
+  ylim <- c(0, 0.2)
+  gg <- sapply(
+    names(red_names),
+    \(n) indrop.expl.var.stats.logumi %>%
+      subset(ident %in% c("stem-like", "EC", "EE") & reduction == n) %>%
+      tibble(
+        group = ident %>% factor(., .) %>% fct_recode(ISCEB="stem-like")
+      ) %>%
+      ggplot(aes(group, pct.expl, fill = group)) +
+      geom_bar(stat="identity") +
+      scale_fill_manual(values = midgut.colors) +
+      scale_x_discrete(
+        # labels = c("ISCEB  ", "EC", "EE")
+      ) +
+      scale_y_continuous(limits = ylim, expand = c(0, 0)) +
+      coord_cartesian(
+        xlim = c(1, 3) + c(-1, 1) * 0.45
+      ) +
+      labs(
+        x = red_names[n],
+        y = bquote("Multiple"*" "*R^2),
+      ) +
+      theme_cowplot() +
+      theme(
+        axis.text = element_text(size = unit(10, "pt")),
+        axis.text.x = element_text(angle = 45, hjust = 0.8),
+        axis.title = element_text(size = unit(12, "pt")),
+        legend.position = "none",
+        plot.margin = margin(1, 0.2 * 72 / 25.4, 0, 0.2 * 72 / 25.4)
+      ),
+    simplify=FALSE
+  )
+  for (i in 2:3) {
+    gg[[i]] <- gg[[i]] +
+      scale_y_continuous(
+        name = NULL,
+        breaks = NULL,
+        limits = ylim,
+        expand = c(0, 0)
+      ) +
+      theme(
+        axis.line.y = element_blank()
+      )
+  }
+  do.call(
+    cbind,
+    sapply(
+      gg,
+      \(g) g %>% set_panel_size(w = unit(0.75, "in"), h = unit(1.5, "in")),
+      simplify = FALSE
+    )
+  )
+}
+
 midgut_explained_variance_dims = c(pca=25, pca.sct=25, pca.subset=9, spca=34, spca2pca=25)
 midgut_expl_var_stem_like <- function(
   indrop, indrop.sct.pca,
