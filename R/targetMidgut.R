@@ -353,5 +353,96 @@ midgut_figures_2 <- list(
       width=0.75,
       height=1.75
     )
+  ),
+
+  tar_target(
+    indrop.gsea.size.factor,
+    sapply(
+      indrop.deg,
+      \(model) mean(
+        c(
+          sum(exp(model$map %*% c(1, 0))),
+          sum(exp(model$map %*% c(1, 1)))
+        )
+      ) /
+        1000 /
+        1000
+    )
+  ),
+  tar_target(
+    indrop.gsea.genes,
+    mapply(
+      \(model, size_factor) rowAlls(
+        (exp(model$map %*% cbind(c(1, 0), c(1, 1))) / size_factor) >= 8,
+        useNames = TRUE
+      ) %>%
+        which() %>%
+        names(),
+      indrop.deg,
+      indrop.gsea.size.factor,
+      SIMPLIFY=FALSE,
+      USE.NAMES = FALSE
+    ) %>%
+      do.call(union, .) %>%
+    # rownames(indrop.deg$pca$map) %>%
+      split(
+        str_extract(., "^His[1234]([AB]?)(?=:)") %>%
+          str_replace_na()
+      ) %>%
+      enframe() %>%
+      rowwise() %>%
+      summarise(
+        value = if (name == "NA")
+            value
+          else
+            c(name, sample(value, 1)),
+        name = if (name == "NA")
+            value
+          else
+            value[2]
+      ) %>%
+      pull(name, value)
+  ),
+  tar_target(
+    indrop.gsea.genes.notfiltered,
+    rownames(indrop.deg$pca$map) %>% setNames(., .)
+  ),
+  tar_target(
+    indrop.gsea,
+    run_fgsea_multiple_times(
+      indrop.deg,
+      indrop.gsea.genes.notfiltered,
+      as_tibble(read.table(midgut.gene.association, sep="\t", comment="!", quote="", fill=T)),
+      as_tibble(read.table(midgut.gene.flybase.biological_process, sep="\t", quote="", fill=T, header=T))
+    ),
+    packages = c(
+      "dplyr",
+      "fgsea",
+      "tibble"
+    )
+  ),
+  tar_target(
+    indrop.gsea.features,
+    plot_fgsea_multiple_times(
+      indrop.deg,
+      indrop.gsea.genes,
+      as_tibble(read.table(midgut.gene.association, sep="\t", comment="!", quote="", fill=T)) %>%
+        subset(V5 %in% c("GO:0006508", "GO:0030261"))
+    ),
+    packages = c(
+      "dplyr",
+      "fgsea",
+      "tibble"
+    )
+  ),
+  tar_file(
+    fig.indrop.gsea,
+    save_figure(
+      "figure/Midgut/Fig5-GSEA.pdf",
+      grob_fig5_gsea(indrop.gsea.features, indrop.deg),
+      w = 5.75,
+      h = 5
+    ),
+    packages = tar_option_get("packages") %>% c("cowplot", "egg", "gtable")
   )
 )

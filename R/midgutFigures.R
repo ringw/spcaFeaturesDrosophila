@@ -1,6 +1,7 @@
 midgut.colors = c(
   'ISC'="#FAD11B", # hcl(68, 95, 85)
   'EB'="#FF7349", # hcl(21, 120, 65)
+  ISCEB="#FF9241", # mixcolor(0.7, ISC, EB)
   'dEC'="#FF82BA", # hcl(345, 80, 70)
   'EC'="#34CDC7", # hcl(187, 55, 75)
   'EC-like'="#A0E6EC", # hcl(10, 48, 74)
@@ -14,6 +15,7 @@ midgut.col = as.list(midgut.colors)
 
 midgut.model.colors.bg = c(PCA=hcl(30, 8, 99), SPCA=hcl(129,6,99))
 midgut.model.colors.legend = c(PCA=hcl(30, 12, 95), SPCA=hcl(129,11,95))
+midgut.model.colors.stroke = c(PCA=hcl(30, 50, 70), SPCA=hcl(189,70,60))
 
 # Outlier cells in the -UMAP_2 direction in PCA-UMAP:
 # > sum(indrop[['umap']]@cell.embeddings[, "UMAP_2"] < -9.5)
@@ -389,4 +391,175 @@ plot_indrop_fig2 <- function(
         make_inset()
     )
   )
+}
+
+plot_color_fgsea_multiple_times <- function(models) {
+  df <- bind_rows(models, .id = "model")
+  point_plot <- df %>%
+    group_by(model) %>%
+    summarise(
+      lookup = which.max(abs(y)),
+      x = x[lookup],
+      y = y[lookup]
+    )
+  tick_height <- 0.25
+  ggplot(df, aes(x, y, group=model, color=model)) +
+    annotate("segment", -Inf, 0, xend = Inf, yend = 0) +
+    geom_segment(
+      aes(xend = xend, yend = yend),
+      df %>%
+        subset(sapply(tick, isTRUE)) %>%
+        rowwise() %>%
+        summarise(x, y = -0.5 * tick_height, xend = x, yend = 0.5 * tick_height, model),
+      linewidth = 0.1,
+      alpha = 0.5
+    ) +
+    geom_hline(
+      aes(yintercept = y, color=model),
+      data = point_plot,
+      linetype = "longdash"
+    ) +
+    geom_line() +
+    geom_point(data = point_plot, size = 1.5) +
+    annotate(
+      "segment",
+      c(1000, 7000),
+      c(-0.5, 0.22),
+      xend = c(3000, 5000),
+      yend = c(-0.7, 0.42),
+      color = muted(midgut.colors[c("ISC", "EB")], c = 80, l = 60),
+      arrow = arrow(length = unit(0.1, "in"))
+    ) +
+    annotate(
+      "text",
+      c(2000, 6000),
+      c(-0.55, 0.37),
+      label = c("ISC+", "EB+")
+    ) +
+    # scale_color_manual(
+    #   values = c(
+    #     pca_clusters = as.character(midgut.model.colors.stroke["PCA"]),
+    #     spca_clusters = as.character(midgut.model.colors.stroke["SPCA"])
+    #   )
+    # ) +
+    coord_cartesian(
+      NULL,
+      c(-1, 0.5),
+      expand = FALSE
+    ) +
+    labs(
+      x = "Nonzero Genes (Ranked)",
+      y = "ES"
+    ) +
+    theme_minimal() +
+    theme(
+      aspect.ratio = 3/4,
+      legend.position = "none"
+    )
+}
+
+grob_fig5_gsea <- function(
+  indrop.gsea.features,
+  indrop.deg
+) {
+  indrop.deg.intercept <- sapply(
+    indrop.deg,
+    \(model) 1000 * 1000 /
+      mean(
+        c(
+          sum(exp(model$map %*% c(1, 0))),
+          sum(exp(model$map %*% c(1, 1)))
+        )
+      )
+  ) %>%
+    log2()
+  gene_list <- c("baf", "His3.3A", "alphaTry", "Amy-p")
+  segment_data <- bind_rows(
+    mapply(
+      \(model, intercept) sapply(
+        gene_list,
+        \(gene) tibble(
+          x = c("ISC", "EB"),
+          logCPM = (
+            rbind(c(1, 0), c(1, 1)) %*% model$map[gene,, drop=T]
+          ) %>%
+            `/`(log(2)) %>%
+            `+`(intercept) %>%
+            as.numeric()
+        ),
+        simplify=FALSE
+      ) %>%
+        bind_rows(.id = "gene"),
+      setNames(indrop.deg, c("PCA", "SPCA")),
+      setNames(indrop.deg.intercept, NULL),
+      SIMPLIFY=FALSE
+    ),
+    .id = "model"
+  )
+  segment_data$gene <- segment_data$gene %>% factor(gene_list)
+  segment_data$x <- segment_data$x %>% factor(c("ISC", "EB"))
+  levels(segment_data$gene)[3] <- "\u03B1Try"
+  plot_segments <- ggplot(segment_data, aes()) +
+    facet_wrap(vars(gene), nrow = 1, scales = "free") +
+    geom_line(aes(x, logCPM, color=model, group=model)) +
+    geom_point(aes(x, logCPM, color=model)) +
+    scale_y_continuous(
+      breaks = \(range) if (all(between(range, 6, 7)))
+          c(6.2, 6.8)
+        else if (all(between(range, 8, 9)))
+          c(8.2, 8.8)
+        else pretty_breaks(n = 2)(range)
+    ) +
+    labs(x = NULL, y = bquote(log[2]*"(CPM)")) +
+    theme_cowplot() +
+    theme(
+      legend.position = "none"
+    )
+  gr <- gtable(
+    unit(c(2.5, 2.5, 0.75), "in"),
+    unit(1.75, "in")
+  ) %>%
+    gtable_add_grob(
+      list(
+        set_panel_size(
+          plot_color_fgsea_multiple_times(indrop.gsea.features$`GO:0030261`) +
+            labs(title = "chromosome condensation"),
+          m = unit(0, "mm"),
+          width = unit(1.75, "in"),
+          height = unit(1.75*3/4, "in")
+        ),
+        set_panel_size(
+          plot_color_fgsea_multiple_times(indrop.gsea.features$`GO:0006508`) +
+            labs(title = "proteolysis"),
+          m = unit(0, "mm"),
+          width = unit(1.75, "in"),
+          height = unit(1.75*3/4, "in")
+        ),
+        get_legend(
+          ggplot(tibble(x=0, y=0, color=c("PCA", "PCA", "SPCA", "SPCA")), aes(x, y, color=color)) +
+            geom_line() +
+            labs(color = NULL) +
+            theme_minimal() # +
+            # scale_color_manual(name = NULL, values = midgut.model.colors.stroke)
+        )
+      ),
+      t = 1,
+      l = 1:3
+    )
+  gr <- gtable(
+    unit(5.75, "in"),
+    unit(c(1.75, 1.75), "in")
+  ) %>%
+    gtable_add_grob(
+      list(
+        gr,
+        set_panel_size(
+          plot_segments,
+          w = unit(0.75, "in"),
+          h = unit(0.6, "in")
+        )
+      ),
+      t = 1:2,
+      l = 1
+    )
 }
