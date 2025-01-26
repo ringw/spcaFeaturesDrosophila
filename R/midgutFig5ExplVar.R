@@ -187,7 +187,7 @@ plot_logumi_bar <- function(indrop.expl.var.stats.logumi) {
   )
 }
 
-midgut_explained_variance_dims = c(pca=25, pca.sct=25, pca.subset=9, spca=34, spca2pca=25)
+midgut_explained_variance_dims = c(pca=9, pca.sct=9, pca.subset=9, spca=34, spca2pca=25)
 midgut_expl_var_stem_like <- function(
   indrop, indrop.sct.pca,
   variable = log(indrop$nCount_RNA)
